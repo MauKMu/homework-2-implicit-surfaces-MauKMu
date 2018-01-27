@@ -1,4 +1,4 @@
-import {vec3} from 'gl-matrix';
+import {vec2, vec3} from 'gl-matrix';
 import * as Stats from 'stats-js';
 import * as DAT from 'dat-gui';
 import Square from './geometry/Square';
@@ -46,6 +46,7 @@ function main() {
   screenQuad = new Square(vec3.fromValues(0, 0, 0));
   screenQuad.create();
 
+  // Camera(position, target)
   const camera = new Camera(vec3.fromValues(0, 0, 5), vec3.fromValues(0, 0, 0));
 
   gl.clearColor(0.0, 0.0, 0.0, 1);
@@ -66,6 +67,9 @@ function main() {
 
     // TODO: get / calculate relevant uniforms to send to shader here
     // TODO: send uniforms to shader
+    raymarchShader.setDims(vec2.fromValues(canvas.width, canvas.height));
+    raymarchShader.setEyePos(camera.position);
+    raymarchShader.setInvViewProj(camera.invViewProjMatrix);
 
     // March!
     raymarchShader.draw(screenQuad);

@@ -1,4 +1,4 @@
-import {vec4, mat4} from 'gl-matrix';
+import {vec2, vec3, vec4, mat4} from 'gl-matrix';
 import Drawable from './Drawable';
 import {gl} from '../../globals';
 
@@ -24,6 +24,9 @@ class ShaderProgram {
   attrPos: number;
 
   unifView: WebGLUniformLocation;
+  unifDims: WebGLUniformLocation;
+  unifInvViewProj: WebGLUniformLocation;
+  unifEyePos: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -41,12 +44,36 @@ class ShaderProgram {
 
     // TODO: add other attributes here
     this.unifView   = gl.getUniformLocation(this.prog, "u_View");
+    this.unifDims   = gl.getUniformLocation(this.prog, "u_Dims");
+    this.unifInvViewProj   = gl.getUniformLocation(this.prog, "u_InvViewProj");
+    this.unifEyePos   = gl.getUniformLocation(this.prog, "u_EyePos");
   }
 
   use() {
     if (activeProgram !== this.prog) {
       gl.useProgram(this.prog);
       activeProgram = this.prog;
+    }
+  }
+
+  setDims(dims: vec2) {
+    this.use();
+    if (this.unifDims != -1) {
+      gl.uniform2fv(this.unifDims, dims);
+    }
+  }
+
+  setInvViewProj(invViewProj: mat4) {
+    this.use();
+    if (this.unifInvViewProj != -1) {
+      gl.uniformMatrix4fv(this.unifInvViewProj, false, invViewProj);
+    }
+  }
+
+  setEyePos(eyePos: vec3) {
+    this.use();
+    if (this.unifEyePos != -1) {
+      gl.uniform3fv(this.unifEyePos, eyePos);
     }
   }
 

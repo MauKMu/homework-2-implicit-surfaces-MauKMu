@@ -5,6 +5,7 @@ class Camera {
   controls: any;
   projectionMatrix: mat4 = mat4.create();
   viewMatrix: mat4 = mat4.create();
+  invViewProjMatrix: mat4 = mat4.create();
   fovy: number = 45;
   aspectRatio: number = 1;
   near: number = 0.1;
@@ -29,12 +30,20 @@ class Camera {
 
   updateProjectionMatrix() {
     mat4.perspective(this.projectionMatrix, this.fovy, this.aspectRatio, this.near, this.far);
+    this.updateInvViewProjMatrix();
+  }
+
+  updateInvViewProjMatrix() {
+    let viewProj = mat4.create();
+    mat4.multiply(viewProj, this.projectionMatrix, this.viewMatrix);
+    mat4.invert(this.invViewProjMatrix, viewProj);
   }
 
   update() {
     this.controls.tick();
     vec3.add(this.target, this.position, this.direction);
     mat4.lookAt(this.viewMatrix, this.controls.eye, this.controls.center, this.controls.up);
+    this.updateInvViewProjMatrix();
   }
 };
 
