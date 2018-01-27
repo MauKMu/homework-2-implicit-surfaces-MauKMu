@@ -1,6 +1,23 @@
 # CIS-566-Project-2
 https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 
+## Student Info
+
+- Name: Mauricio Mutai
+- PennKey: `mmutai`
+
+## Live Demo
+
+- Click below for the live demo!
+
+[![]()](https://maukmu.github.io/homework-2-ray-marching-implicit-surfaces/)
+
+## Techniques Used
+
+- `LOVE`
+- `DETERMINATION`
+- Spaghetti 
+
 ## Objective
 - Gain more experience with GLSL Shader writing and raymarching
 - Experiment with procedural modeling and animation of scenes
