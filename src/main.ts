@@ -68,7 +68,7 @@ function main() {
     // TODO: get / calculate relevant uniforms to send to shader here
     // TODO: send uniforms to shader
     raymarchShader.setDims(vec2.fromValues(canvas.width, canvas.height));
-    raymarchShader.setEyePos(camera.position);
+    raymarchShader.setEyePos(camera.controls.eye);
     raymarchShader.setInvViewProj(camera.invViewProjMatrix);
 
     // March!
