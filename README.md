@@ -18,6 +18,11 @@ https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 - `DETERMINATION`
 - Spaghetti 
 
+## External References
+
+- http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#surface-normals-and-lighting
+- http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+
 ## Objective
 - Gain more experience with GLSL Shader writing and raymarching
 - Experiment with procedural modeling and animation of scenes
