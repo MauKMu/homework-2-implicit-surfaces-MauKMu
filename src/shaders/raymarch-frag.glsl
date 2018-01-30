@@ -5,12 +5,14 @@ precision highp float;
 uniform vec2 u_Dims;
 uniform vec3 u_EyePos;
 uniform mat4 u_InvViewProj;
+uniform float u_Time;
 
 out vec4 out_Col;
 
 // hard-code this
 const float FAR_PLANE = 1000.0;
 const float EPSILON = 0.001;
+const float PI = 3.14159265;
 
 struct Ray {
     vec3 origin;
@@ -46,8 +48,213 @@ float sdfCube(vec3 p) {
     return (maxDiff <= 0.0) ? maxDiff : min(min(onlyPosDiff.x, onlyPosDiff.y), onlyPosDiff.z);
 }
 
+// t.x = outer radius
+// t.y = inner radius
+float sdfTorus(vec3 p, vec2 t)
+{
+  vec2 q = vec2(length(p.xz)-t.x,p.y);
+  return length(q)-t.y;
+}
+
+float length8(vec2 v) {
+    float sum = dot(vec2(1.0), pow(v, vec2(8.0)));
+    return pow(sum, 0.125);
+}
+
+float length8(vec3 v) {
+    float sum = dot(vec3(1.0), pow(v, vec3(8.0)));
+    return pow(sum, 0.125);
+}
+
+float sdfTorus82( vec3 p, vec2 t )
+{
+  vec2 q = vec2(length(p.xz)-t.x,p.y);
+  return length8(q)-t.y;
+}
+
+// c.xy = coordinates of center
+// c.z  = radius of cylinder's cross-section
+// modified from IQ's to make cylinder extend along Z axis instead of Y
+float sdfCylinder(vec3 p, vec3 c)
+{
+  return length(p.xy-c.xy)-c.z;
+}
+
+float sdfTriPrism( vec3 p, vec2 h )
+{
+    vec3 q = abs(p);
+    return max(q.z-h.y,max(q.x*0.866025+p.y*0.5,-p.y)-h.x*0.5);
+}
+
+float opCheapBend( vec3 P )
+{
+    mat3 rot = mat3(0.0);
+    rot[0] = vec3(0, 0, -1);
+    rot[1] = vec3(0, 1, 0);
+    rot[2] = vec3(1, 0, 0);
+    vec3 p = rot * P;
+    float c = cos(20.0*p.y);
+    float s = sin(20.0*p.y);
+    mat2  m = mat2(c,-s,s,c);
+    vec3  q = vec3(m*p.xz,p.y);
+    return sdfTriPrism(q, vec2(2.0, 4.0));
+}
+
+const float HOLE_PIECE_SIDE = 3.0;
+const float HOLE_PIECE_THICKNESS = 0.5;
+
+float sdfFlatCube(vec3 p) {
+    vec3 d = abs(p) - vec3(HOLE_PIECE_SIDE, HOLE_PIECE_SIDE, HOLE_PIECE_THICKNESS);
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+const vec3 HOLE_CYLINDER_PARAMS = vec3(0.0, 0.0, 1.0);
+
+// modified from IQ's to make cylinder extend along Z axis instead of Y
+float sdfHoleCylinder(vec3 p)
+{
+  return length(p.xy-HOLE_CYLINDER_PARAMS.xy)-HOLE_CYLINDER_PARAMS.z;
+}
+
+// FlatCube - HoleCylinder
+float sdfHolePiece(vec3 p) {
+    return max(sdfFlatCube(p), -sdfHoleCylinder(p));
+}
+
+const float NUM_CYCLES = 5.0;
+
+float animHolePiece(vec3 p) {
+    float tFract = fract(u_Time * 0.001);
+    float tWhole = u_Time * 0.001 - tFract;
+    if (tWhole >= NUM_CYCLES) {
+        tWhole = NUM_CYCLES;
+        tFract = 0.0;
+    }
+    const vec3 toPivot = vec3(HOLE_PIECE_SIDE, -HOLE_PIECE_SIDE, 0.0);
+    vec3 toPosition = vec3(2.0 * HOLE_PIECE_SIDE, 0.0, 0.0) * tWhole;
+    float angle = smoothstep(0.1, 0.88, cos(tFract * PI) * 0.5 + 0.5) * PI * 0.5;
+    float c = cos(angle);
+    float s = sin(angle);
+    mat3 rot = mat3(vec3(c, s, 0.0),
+                    vec3(-s, c, 0.0),
+                    vec3(0.0, 0.0, 1.0));
+    vec3 transP = toPivot + rot * (p - toPivot + toPosition);
+    //transP = p + toPosition;
+    return sdfHolePiece(transP);
+}
+
+float animHolePieceRight(vec3 p) {
+    float tFract = fract(u_Time * 0.001);
+    float tWhole = u_Time * 0.001 - tFract;
+    if (tWhole >= NUM_CYCLES) {
+        tWhole = NUM_CYCLES;
+        tFract = 0.0;
+    }
+    const vec3 toPivot = vec3(-3.0, -3.0, 0.0);
+    vec3 toPosition = vec3(-6.0, 0.0, 0.0) * tWhole;
+    float angle = -smoothstep(0.1, 0.88, cos(tFract * PI) * 0.5 + 0.5) * PI * 0.5;
+    float c = cos(angle);
+    float s = sin(angle);
+    mat3 rot = mat3(vec3(c, s, 0.0),
+                    vec3(-s, c, 0.0),
+                    vec3(0.0, 0.0, 1.0));
+    vec3 transP = toPivot + rot * (p - toPivot + toPosition);
+    //transP = p + toPosition;
+    return sdfHolePiece(transP);
+}
+
+float sdfBgCube(vec3 p) {
+    vec3 d = abs(p) - vec3(HOLE_PIECE_SIDE * 0.95);
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+const vec3 REP_Y_OFFSET = vec3(0.0, HOLE_PIECE_SIDE, 0.0);
+
+float repBgCube(vec3 p) {
+    vec3 c = vec3(2.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE);
+    vec3 q = mod(p - REP_Y_OFFSET, c) - 0.5 * c;
+    return sdfBgCube(q);
+}
+
+float sdfBridgeBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(10.0 * HOLE_PIECE_SIDE, HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE);
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfBridge(vec3 p) {
+    return max(repBgCube(p), sdfBridgeBoundary(p));
+}
+
+const float BG_LENGTH = 20.0;
+
+float sdfBgBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(12.0, 5.0, BG_LENGTH) * HOLE_PIECE_SIDE;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfBoundedBgCubes(vec3 p) {
+    return max(repBgCube(p), sdfBgBoundary(p));
+}
+
+float sdfFirstLevelBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(3.0, 4.0, BG_LENGTH) * HOLE_PIECE_SIDE;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfSecondLevelBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(5.0, 3.0, BG_LENGTH) * HOLE_PIECE_SIDE;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfThirdLevelBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(7.0, 2.0, BG_LENGTH) * HOLE_PIECE_SIDE;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfFourthLevelBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(9.0, 1.0, BG_LENGTH) * HOLE_PIECE_SIDE;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfCarvedBg(vec3 p) {
+    float uncarved = sdfBoundedBgCubes(p);
+    float first = sdfFirstLevelBoundary(p - vec3(1.0, 1.0, 0.0) * HOLE_PIECE_SIDE);
+    float second = sdfSecondLevelBoundary(p - vec3(1.0, 2.0, 0.0) * HOLE_PIECE_SIDE);
+    float third = sdfThirdLevelBoundary(p - vec3(1.0, 3.0, 0.0) * HOLE_PIECE_SIDE);
+    float fourth = sdfFourthLevelBoundary(p - vec3(1.0, 4.0, 0.0) * HOLE_PIECE_SIDE);
+    return max(max(max(max(uncarved, -first), -second), -third), -fourth);
+}
+
+const vec3 LEFT_TRANSLATION = vec3((NUM_CYCLES - 1.0) * 6.0, 0.0, 0.0);
+const vec3 RIGHT_TRANSLATION = -LEFT_TRANSLATION + vec3(0.0, 0.0, 2.0 * HOLE_PIECE_THICKNESS);
+const vec3 BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 0.25) * HOLE_PIECE_SIDE;
+
+// b = box dimensions
+// r = radius of round parts
 float udfRoundBox(vec3 p, vec3 b, float r)
 {
+  // test carved background
+  float carved = sdfCarvedBg(p - BRIDGE_TRANSLATION);
+  // test "bridge"
+  float bridge = sdfBridge(p - BRIDGE_TRANSLATION);
+  //return rep(p);
+  // test left piece
+  float left = animHolePiece(p - LEFT_TRANSLATION);
+  // test right piece
+  float right = animHolePieceRight(p - RIGHT_TRANSLATION);
+  return min(carved, min(bridge, min(left, right)));
+  return sdfHolePiece(p);
+  return sdfCylinder(p, b);
+  return sdfFlatCube(p);
+  //return sdfTriPrism(p, vec2(2.0, 4.0));
+  //return opCheapBend(p);
+  //return sdfCylinder(p, b);
+  /*
+  vec3 c = vec3(6.0, 12.0, 6.0);
+  vec3 q = mod(p, c) - 0.5 * c;
+  return sdfTorus82(q, b.xy);
+  */
+  // note: can render cube from inside if return abs of "udf"
   return length(max(abs(p)-b,0.0))-r;
   //return sdfCube(p);
   // below gives interesting result w/ r = 1, b = vec3(2, 1, 1)
@@ -57,17 +264,23 @@ float udfRoundBox(vec3 p, vec3 b, float r)
 
 const float MAX_DIST = 1000.0;
 
+// cake???
+// PCB??
+// rhythm heaven?
 Intersection sphereMarch(in Ray r) {
     float t = 0.0;
     Intersection isx;
     isx.t = -1.0;
     isx.normal = vec3(1.0, -1.0, -1.0);
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 300; i++) {
         vec3 p = r.origin + t * r.dir;
-        vec3 dims = vec3(0.5);
+        vec3 dims = vec3(1.0, 1.0, 1.0 + (cos(u_Time * 0.001) * 0.5 + 0.5));
+        dims.xy = dims.zz;
+        dims.z = 1.0;
+        dims.xy = vec2(0.0);
         float radius = 0.3;
         float dist = udfRoundBox(p, dims, radius);
-        if (dist < EPSILON * 0.1) {
+        if (dist < EPSILON * 10.0) {
             isx.t = t;
             float distXL = udfRoundBox(p - vec3(EPSILON, 0.0, 0.0), dims, radius);
             float distXH = udfRoundBox(p + vec3(EPSILON, 0.0, 0.0), dims, radius);

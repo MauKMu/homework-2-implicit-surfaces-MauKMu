@@ -15,6 +15,10 @@ const controls = {
 let screenQuad: Square;
 
 function main() {
+  // Time-keeping variables
+  let lastTime = 0;
+  let accTime = 0;
+
   // Initial display for framerate
   const stats = Stats();
   stats.setMode(0);
@@ -57,6 +61,9 @@ function main() {
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/raymarch-frag.glsl')),
   ]);
 
+
+  lastTime = Date.now();
+
   // This function will be called every frame
   function tick() {
     camera.update();
@@ -70,6 +77,10 @@ function main() {
     raymarchShader.setDims(vec2.fromValues(canvas.width, canvas.height));
     raymarchShader.setEyePos(camera.controls.eye);
     raymarchShader.setInvViewProj(camera.invViewProjMatrix);
+    let now = Date.now();
+    accTime += now - lastTime;
+    lastTime = now;
+    raymarchShader.setTime(accTime);
 
     // March!
     raymarchShader.draw(screenQuad);

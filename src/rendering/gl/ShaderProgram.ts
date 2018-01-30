@@ -25,6 +25,7 @@ class ShaderProgram {
 
   unifView: WebGLUniformLocation;
   unifDims: WebGLUniformLocation;
+  unifTime: WebGLUniformLocation;
   unifInvViewProj: WebGLUniformLocation;
   unifEyePos: WebGLUniformLocation;
 
@@ -45,6 +46,7 @@ class ShaderProgram {
     // TODO: add other attributes here
     this.unifView   = gl.getUniformLocation(this.prog, "u_View");
     this.unifDims   = gl.getUniformLocation(this.prog, "u_Dims");
+    this.unifTime   = gl.getUniformLocation(this.prog, "u_Time");
     this.unifInvViewProj   = gl.getUniformLocation(this.prog, "u_InvViewProj");
     this.unifEyePos   = gl.getUniformLocation(this.prog, "u_EyePos");
   }
@@ -60,6 +62,13 @@ class ShaderProgram {
     this.use();
     if (this.unifDims != -1) {
       gl.uniform2fv(this.unifDims, dims);
+    }
+  }
+
+  setTime(time: number) {
+    this.use();
+    if (this.unifTime != -1) {
+      gl.uniform1f(this.unifTime, time);
     }
   }
 
