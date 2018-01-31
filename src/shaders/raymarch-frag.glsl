@@ -108,12 +108,25 @@ float sdfFlatCube(vec3 p) {
     return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
-const vec3 HOLE_CYLINDER_PARAMS = vec3(0.0, 0.0, 1.0);
+//const vec3 HOLE_CYLINDER_PARAMS = vec3(0.0, 0.0, 1.0);
+const float PEG_RADIUS = 1.0;
 
 // modified from IQ's to make cylinder extend along Z axis instead of Y
 float sdfHoleCylinder(vec3 p)
 {
-  return length(p.xy-HOLE_CYLINDER_PARAMS.xy)-HOLE_CYLINDER_PARAMS.z;
+  //return length(p.xy-HOLE_CYLINDER_PARAMS.xy)-HOLE_CYLINDER_PARAMS.z;
+  return length(p.xy) - PEG_RADIUS;
+}
+
+const float PEG_LENGTH = 4.0;
+
+float sdfPegBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(PEG_RADIUS, PEG_RADIUS, PEG_LENGTH);
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfPeg(vec3 p) {
+    return max(sdfHoleCylinder(p), sdfPegBoundary(p));
 }
 
 // FlatCube - HoleCylinder
@@ -185,6 +198,17 @@ float sdfBridge(vec3 p) {
     return max(repBgCube(p), sdfBridgeBoundary(p));
 }
 
+const vec3 PEG_SUPPORT_DIMS = vec3(HOLE_PIECE_SIDE, HOLE_PIECE_SIDE - PEG_RADIUS, HOLE_PIECE_SIDE);
+
+float sdfPegSupportHole(vec3 p) {
+    vec3 d = abs(p - vec3(1.0, 1.0, 0.0) * HOLE_PIECE_SIDE) - PEG_SUPPORT_DIMS;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfPegBridge(vec3 p) {
+    return max(sdfBridge(p), -sdfPegSupportHole(p));
+}
+
 const float BG_LENGTH = 20.0;
 
 float sdfBgBoundary(vec3 p) {
@@ -228,6 +252,7 @@ float sdfCarvedBg(vec3 p) {
 const vec3 LEFT_TRANSLATION = vec3((NUM_CYCLES - 1.0) * 6.0, 0.0, 0.0);
 const vec3 RIGHT_TRANSLATION = -LEFT_TRANSLATION + vec3(0.0, 0.0, 2.0 * HOLE_PIECE_THICKNESS);
 const vec3 BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 0.25) * HOLE_PIECE_SIDE;
+const vec3 PEG_BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 10.25) * HOLE_PIECE_SIDE;
 
 // b = box dimensions
 // r = radius of round parts
@@ -237,12 +262,15 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   float carved = sdfCarvedBg(p - BRIDGE_TRANSLATION);
   // test "bridge"
   float bridge = sdfBridge(p - BRIDGE_TRANSLATION);
-  //return rep(p);
+  // test peg "bridge"
+  float pegBridge = sdfPegBridge(p - PEG_BRIDGE_TRANSLATION);
+  // test peg support
+    float pegSupport = sdfPegSupportHole(p - PEG_BRIDGE_TRANSLATION);
   // test left piece
   float left = animHolePiece(p - LEFT_TRANSLATION);
   // test right piece
   float right = animHolePieceRight(p - RIGHT_TRANSLATION);
-  return min(carved, min(bridge, min(left, right)));
+  return min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right)))));
   return sdfHolePiece(p);
   return sdfCylinder(p, b);
   return sdfFlatCube(p);
