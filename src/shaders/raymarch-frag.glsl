@@ -144,7 +144,9 @@ const vec3 LAUNCH_MOVEMENT = vec3(0.0, 0.0, -10.25) * HOLE_PIECE_SIDE;
 
 const vec3 BACK_MOVEMENT = vec3(0.0, 0.0, -1.9) * HOLE_PIECE_SIDE; 
 const vec3 LEFT_TO_POSITION = vec3(2.0, 0.0, 0.0) * HOLE_PIECE_SIDE; 
+const vec3 RIGHT_TO_POSITION = vec3(-2.0, 0.0, 0.0) * HOLE_PIECE_SIDE; 
 const vec3 LEFT_BEFORE_FALL = BACK_MOVEMENT - LEFT_TO_POSITION * (NUM_CYCLES - 1.0); 
+const vec3 RIGHT_BEFORE_FALL = BACK_MOVEMENT - RIGHT_TO_POSITION * (NUM_CYCLES - 1.0); 
 
 const float BACK_START = LAUNCH_END;
 const float BACK_END = BACK_START + 0.5;
@@ -184,6 +186,9 @@ float animHolePiece(vec3 p, float time) {
     // falling off -- translation
     float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
     vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    // move on treadmill
+    float tTreadmill = max(time, FALL_DISP_END) - FALL_DISP_END;
+    vec3 treadmill = vec3(0.0, 0.0, 3.0) * HOLE_PIECE_SIDE * tTreadmill;
     // "clamp" so first half of animation stops
     if (tWhole >= NUM_CYCLES) {
         tWhole = NUM_CYCLES;
@@ -202,9 +207,10 @@ float animHolePiece(vec3 p, float time) {
     //rot = fallRot * rot;
     vec3 transP = toPivot + rot * (p - toPivot + toPosition);
     transP -= back;
-    const vec3 toPivotFall = vec3(0.0, 1.0, 2.0) * HOLE_PIECE_SIDE;
+    const vec3 toPivotFall = vec3(0.0, 1.0, 1.9) * HOLE_PIECE_SIDE - vec3(0.0, 0.0, 0.5) * HOLE_PIECE_THICKNESS;
     if (time > FALL_ROT_START) {
-        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - LEFT_BEFORE_FALL;
+        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - LEFT_BEFORE_FALL - treadmill;
+        //transP = p - LEFT_BEFORE_FALL;
     }
     return sdfHolePiece(transP);
 }
@@ -228,6 +234,9 @@ float animHolePieceRight(vec3 p, float time) {
     // falling off -- translation
     float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
     vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    // move on treadmill
+    float tTreadmill = max(time, FALL_DISP_END) - FALL_DISP_END;
+    vec3 treadmill = vec3(0.0, 0.0, 3.0) * HOLE_PIECE_SIDE * tTreadmill;
     // "clamp" so first half of animation stops
     if (tWhole >= NUM_CYCLES) {
         tWhole = NUM_CYCLES;
@@ -243,9 +252,10 @@ float animHolePieceRight(vec3 p, float time) {
                     vec3(0.0, 0.0, 1.0));
     vec3 transP = toPivot + rot * (p - toPivot + toPosition);
     transP -= back;
-    const vec3 toPivotFall = vec3(0.0, 1.0, 2.0) * HOLE_PIECE_SIDE;
+    const vec3 toPivotFall = vec3(0.0, 1.0, 1.9) * HOLE_PIECE_SIDE - vec3(0.0, 0.0, -0.5 * HOLE_PIECE_THICKNESS);
     if (time > FALL_ROT_START) {
-        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - LEFT_BEFORE_FALL;
+        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - RIGHT_BEFORE_FALL - treadmill;
+        //transP = p - RIGHT_BEFORE_FALL;
     }
     return sdfHolePiece(transP);
 }
@@ -272,11 +282,14 @@ float animPeg(vec3 p, float time) {
     // falling off -- translation
     float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
     vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    // move on treadmill
+    float tTreadmill = max(time, FALL_DISP_END) - FALL_DISP_END;
+    vec3 treadmill = vec3(0.0, 0.0, 3.0) * HOLE_PIECE_SIDE * tTreadmill;
     // combine movement
     vec3 transP = p - launch - back;
     const vec3 toPivotFall = vec3(0.0, 3.0 * PEG_RADIUS, (10.25 + 1.9) * HOLE_PIECE_SIDE);// * PEG_RADIUS;
     if (time > FALL_ROT_START) {
-        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - PEG_BEFORE_FALL;
+        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - PEG_BEFORE_FALL - treadmill;
         //transP -= tFallDisp;
     }
     return sdfPeg(transP);
