@@ -136,22 +136,72 @@ float sdfHolePiece(vec3 p) {
 
 const float NUM_CYCLES = 5.0;
 
+const float LAUNCH_INTERVAL = 0.07;
+const float LAUNCH_END = NUM_CYCLES - 0.22;
+const float LAUNCH_START = LAUNCH_END - LAUNCH_INTERVAL;
+
+const vec3 LAUNCH_MOVEMENT = vec3(0.0, 0.0, -10.25) * HOLE_PIECE_SIDE;
+
+const vec3 BACK_MOVEMENT = vec3(0.0, 0.0, -1.9) * HOLE_PIECE_SIDE; 
+const vec3 LEFT_TO_POSITION = vec3(2.0, 0.0, 0.0) * HOLE_PIECE_SIDE; 
+const vec3 LEFT_BEFORE_FALL = BACK_MOVEMENT - LEFT_TO_POSITION * (NUM_CYCLES - 1.0); 
+
 float animHolePiece(vec3 p, float time) {
     float tFract = fract(time);
     float tWhole = time - tFract;
+    // compute second half of animation (falling off bridge)
+    // moving back before falling
+    float tBack = max(time, LAUNCH_END) - LAUNCH_END;
+    tBack = min(tBack, 0.5) * 2.0;
+    vec3 back = BACK_MOVEMENT * tBack;
+    // fall off while rotating
+    // when first half ends, total translation is toPosition * NUM_CYCLES
+    // add this to back * 1 to get total translation prior to falling off
+    /* OBSOLETE
+    const vec3 transBeforeFall = LEFT_TO_POSITION * NUM_CYCLES + BACK_MOVEMENT;
+    const vec3 toPivotFall = vec3(0.0, -1.0, 0.0) * HOLE_PIECE_SIDE;
+    const vec3 blah = -toPivotFall + transBeforeFall;
+    */
+    // can use this to move back to origin, then to new pivot
+    float tFallRot = clamp(time, LAUNCH_END + 0.5, LAUNCH_END + 1.5) - (LAUNCH_END + 0.5);
+    float tFallDisp = clamp(time, LAUNCH_END + 0.7, LAUNCH_END + 1.7) - (LAUNCH_END + 0.7);
+    vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    float fallAngle = smoothstep(0.05, 0.8, -cos(tFallRot * PI) * 0.5 + 0.5) * PI;
+    // "clamp" so first half of animation stops
     if (tWhole >= NUM_CYCLES) {
         tWhole = NUM_CYCLES;
         tFract = 0.0;
     }
     const vec3 toPivot = vec3(HOLE_PIECE_SIDE, -HOLE_PIECE_SIDE, 0.0);
-    vec3 toPosition = vec3(2.0 * HOLE_PIECE_SIDE, 0.0, 0.0) * tWhole;
+    //vec3 toPosition = vec3(2.0 * HOLE_PIECE_SIDE, 0.0, 0.0) * tWhole;
+    vec3 toPosition = LEFT_TO_POSITION * tWhole;
     float angle = smoothstep(0.1, 0.88, cos(tFract * PI) * 0.5 + 0.5) * PI * 0.5;
     float c = cos(angle);
     float s = sin(angle);
+    // rotation about Z (first half)
     mat3 rot = mat3(vec3(c, s, 0.0),
                     vec3(-s, c, 0.0),
                     vec3(0.0, 0.0, 1.0));
+    // rotation about X (second half)
+    float fallC = cos(fallAngle);
+    float fallS = sin(fallAngle);
+    mat3 fallRot = mat3(vec3(1.0, 0.0, 0.0),
+                        vec3(0.0, fallC, fallS),
+                        vec3(0.0, -fallS, fallC));
+    /*
+    mat3 fallRot = mat3(vec3(fallC, 0.0, -fallS),
+                        vec3(0.0, 1.0, 0.0),
+                        vec3(fallS, 0.0, fallC));
+                        */
+    rot = fallRot * rot;
     vec3 transP = toPivot + rot * (p - toPivot + toPosition);
+    transP -= back;
+    //transP = blah + fallRot * (transP - blah);
+    const vec3 toPivotFall = vec3(0.0, 1.0, 2.0) * HOLE_PIECE_SIDE;
+    if (time > LAUNCH_END + 0.5) {
+        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - LEFT_BEFORE_FALL;
+        //transP -= tFallDisp;
+    }
     //transP = p + toPosition;
     return sdfHolePiece(transP);
 }
@@ -176,11 +226,6 @@ float animHolePieceRight(vec3 p, float time) {
     return sdfHolePiece(transP);
 }
 
-const float LAUNCH_INTERVAL = 0.07;
-const float LAUNCH_END = NUM_CYCLES - 0.22;
-const float LAUNCH_START = LAUNCH_END - LAUNCH_INTERVAL;
-
-const vec3 LAUNCH_MOVEMENT = vec3(0.0, 0.0, -10.25) * HOLE_PIECE_SIDE;
 
 float animPeg(vec3 p, float time) {
     float launchT = (clamp(time, LAUNCH_START, LAUNCH_END) - LAUNCH_START) / LAUNCH_INTERVAL;
