@@ -146,13 +146,22 @@ const vec3 BACK_MOVEMENT = vec3(0.0, 0.0, -1.9) * HOLE_PIECE_SIDE;
 const vec3 LEFT_TO_POSITION = vec3(2.0, 0.0, 0.0) * HOLE_PIECE_SIDE; 
 const vec3 LEFT_BEFORE_FALL = BACK_MOVEMENT - LEFT_TO_POSITION * (NUM_CYCLES - 1.0); 
 
+const float BACK_START = LAUNCH_END;
+const float BACK_END = BACK_START + 0.5;
+
+const float FALL_ROT_START = LAUNCH_END + 0.5;
+const float FALL_ROT_END = FALL_ROT_START + 1.0;
+
+const float FALL_DISP_START = FALL_ROT_START + 0.2;
+const float FALL_DISP_END = FALL_DISP_START + 1.0;
+
 float animHolePiece(vec3 p, float time) {
     float tFract = fract(time);
     float tWhole = time - tFract;
     // compute second half of animation (falling off bridge)
     // moving back before falling
-    float tBack = max(time, LAUNCH_END) - LAUNCH_END;
-    tBack = min(tBack, 0.5) * 2.0;
+    float tBack = clamp(time, BACK_START, BACK_END) - BACK_START;
+    tBack = tBack * 2.0;
     vec3 back = BACK_MOVEMENT * tBack;
     // fall off while rotating
     // when first half ends, total translation is toPosition * NUM_CYCLES
@@ -163,8 +172,8 @@ float animHolePiece(vec3 p, float time) {
     const vec3 blah = -toPivotFall + transBeforeFall;
     */
     // can use this to move back to origin, then to new pivot
-    float tFallRot = clamp(time, LAUNCH_END + 0.5, LAUNCH_END + 1.5) - (LAUNCH_END + 0.5);
-    float tFallDisp = clamp(time, LAUNCH_END + 0.7, LAUNCH_END + 1.7) - (LAUNCH_END + 0.7);
+    float tFallRot = clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START);
+    float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
     vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
     float fallAngle = smoothstep(0.05, 0.8, -cos(tFallRot * PI) * 0.5 + 0.5) * PI;
     // "clamp" so first half of animation stops
@@ -198,7 +207,7 @@ float animHolePiece(vec3 p, float time) {
     transP -= back;
     //transP = blah + fallRot * (transP - blah);
     const vec3 toPivotFall = vec3(0.0, 1.0, 2.0) * HOLE_PIECE_SIDE;
-    if (time > LAUNCH_END + 0.5) {
+    if (time > FALL_ROT_START) {
         transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - LEFT_BEFORE_FALL;
         //transP -= tFallDisp;
     }
@@ -226,10 +235,35 @@ float animHolePieceRight(vec3 p, float time) {
     return sdfHolePiece(transP);
 }
 
+const vec3 PEG_BEFORE_FALL = LAUNCH_MOVEMENT + BACK_MOVEMENT;
 
 float animPeg(vec3 p, float time) {
-    float launchT = (clamp(time, LAUNCH_START, LAUNCH_END) - LAUNCH_START) / LAUNCH_INTERVAL;
-    vec3 transP = p - launchT * LAUNCH_MOVEMENT;
+    // initial launch
+    float tLaunch = (clamp(time, LAUNCH_START, LAUNCH_END) - LAUNCH_START) / LAUNCH_INTERVAL;
+    vec3 launch = LAUNCH_MOVEMENT * tLaunch;
+    // moving back along with square piece
+    float tBack = clamp(time, BACK_START, BACK_END) - BACK_START;
+    tBack = tBack * 2.0;
+    vec3 back = BACK_MOVEMENT * tBack;
+    // falling off -- rotation
+    float tFallRot = clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START);
+    float fallAngle = smoothstep(0.05, 0.8, -cos(tFallRot * PI) * 0.5 + 0.5) * PI;
+    // rotation matrix
+    float fallC = cos(fallAngle);
+    float fallS = sin(fallAngle);
+    mat3 fallRot = mat3(vec3(1.0, 0.0, 0.0),
+                        vec3(0.0, fallC, fallS),
+                        vec3(0.0, -fallS, fallC));
+    // falling off -- translation
+    float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
+    vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    // combine movement
+    vec3 transP = p - launch - back;
+    const vec3 toPivotFall = vec3(0.0, 3.0 * PEG_RADIUS, (10.25 + 1.9) * HOLE_PIECE_SIDE);// * PEG_RADIUS;
+    if (time > FALL_ROT_START) {
+        transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - PEG_BEFORE_FALL;
+        //transP -= tFallDisp;
+    }
     return sdfPeg(transP);
 }
 
