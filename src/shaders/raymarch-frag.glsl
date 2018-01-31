@@ -134,6 +134,27 @@ float sdfHolePiece(vec3 p) {
     return max(sdfFlatCube(p), -sdfHoleCylinder(p));
 }
 
+// SHAFT =================================
+const float SHAFT_RADIUS = 1.0;
+
+float sdfShaftCylinder(vec3 p)
+{
+  return length(p.xy) - SHAFT_RADIUS;
+}
+
+const float SHAFT_LENGTH = 8.0;
+
+float sdfShaftBoundary(vec3 p) {
+    vec3 d = abs(p) - vec3(SHAFT_RADIUS, SHAFT_RADIUS, SHAFT_LENGTH);
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdfShaft(vec3 p) {
+    return max(sdfShaftCylinder(p), sdfShaftBoundary(p));
+}
+
+ // ANIMATIONS ===============
+
 const float NUM_CYCLES = 5.0;
 
 const float LAUNCH_INTERVAL = 0.07;
@@ -295,6 +316,50 @@ float animPeg(vec3 p, float time) {
     return sdfPeg(transP);
 }
 
+const vec3 TO_PIVOT_FIRST_SHAFT = vec3(0.0, 0.0, -SHAFT_LENGTH);
+
+const float SHAFT_ROT_START = 1.0;
+const float SHAFT_ROT_END = SHAFT_ROT_START + 1.0;
+
+float animFirstShaft(vec3 p, float time) {
+    float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
+    float rotAngle = 0.5 - cos(tRot * PI) * 0.5;
+    rotAngle *= -PI * 0.33333;
+    // rotation matrix (about X)
+    float c = cos(rotAngle);
+    float s = sin(rotAngle);
+    mat3 rot = mat3(vec3(1.0, 0.0, 0.0),
+                    vec3(0.0, c, s),
+                    vec3(0.0, -s, c));
+    vec3 transP = -TO_PIVOT_FIRST_SHAFT + rot * (p + TO_PIVOT_FIRST_SHAFT);
+    return sdfShaft(transP);
+}
+
+float animSecondShaft(vec3 p, float time) {
+    float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
+    float rotAngle = 0.5 + cos(tRot * PI) * 0.5;
+    rotAngle += 5.0;
+    rotAngle *= -PI * 0.33333;
+    // rotation matrix (about X)
+    float c = cos(rotAngle);
+    float s = sin(rotAngle);
+    mat3 rot = mat3(vec3(1.0, 0.0, 0.0),
+                    vec3(0.0, c, s),
+                    vec3(0.0, -s, c));
+    // move joint
+    float jointAngle = 0.5 - cos(tRot * PI) * 0.5;
+    jointAngle *= PI * 0.33333;
+    float jointC = cos(jointAngle);
+    float jointS = sin(jointAngle);
+    // stands for first shaft end
+    const vec3 fse = vec3(0.0, 0.0, -2.0 * SHAFT_LENGTH);
+    vec3 secondShaftStart = vec3(fse.x, jointC * fse.y + -jointS * fse.z, jointS * fse.y + jointC * fse.z);
+    vec3 transP = -TO_PIVOT_FIRST_SHAFT + rot * (p + TO_PIVOT_FIRST_SHAFT - secondShaftStart);
+    return sdfShaft(transP);
+}
+
+// BACKGROUND ================
+
 float sdfBgCube(vec3 p) {
     vec3 d = abs(p) - vec3(HOLE_PIECE_SIDE * 0.95);
     return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
@@ -373,11 +438,14 @@ const vec3 RIGHT_TRANSLATION = -LEFT_TRANSLATION + vec3(0.0, 0.0, 2.0 * HOLE_PIE
 const vec3 BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 0.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_TRANSLATION = vec3(0.0, 0.0, 10.25) * HOLE_PIECE_SIDE;
+const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 0.0, 15.0) * HOLE_PIECE_SIDE;
 
 // b = box dimensions
 // r = radius of round parts
 float udfRoundBox(vec3 p, vec3 b, float r)
 {
+  float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, u_Time * 0.001);
+  float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, 0.0, 0.0), u_Time * 0.001);
   // test carved background
   float carved = sdfCarvedBg(p - BRIDGE_TRANSLATION);
   // test "bridge"
@@ -392,7 +460,8 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   float right = animHolePieceRight(p - RIGHT_TRANSLATION, u_Time * 0.001);
   // test peg
   float peg = animPeg(p - PEG_TRANSLATION, u_Time * 0.001);
-  return min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
+  float partial = min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
+  return min(secondShaft, min(partial, firstShaft));
   return sdfHolePiece(p);
   return sdfCylinder(p, b);
   return sdfFlatCube(p);
