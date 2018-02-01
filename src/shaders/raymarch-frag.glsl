@@ -29,20 +29,6 @@ struct Ray {
     vec3 dir;
 };
 
-float jankySqr(in Ray ray) {
-    if (abs(ray.dir.z) < EPSILON) {
-        return -1.0;
-    }
-    vec3 nor = vec3(0.0, 0.0, 1.0);
-    //float t = dot(nor, -ray.origin) / dot(nor, ray.dir);
-    float t = -ray.origin.z / ray.dir.z;
-    vec3 p = ray.origin + t * ray.dir;
-    if (abs(p.x) <= 0.1 && abs(p.y) <= 0.1) {
-        return t;
-    }
-    return -1.0;
-}
-
 struct Intersection {
     float t;
     vec3 normal;
@@ -51,11 +37,6 @@ struct Intersection {
 float sdfCube(vec3 p) {
     vec3 d = abs(p) - vec3(0.5);
     return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
-    // dimensions = 1
-    vec3 diff = abs(p) - vec3(0.5);
-    float maxDiff = max(max(diff.x, diff.y), diff.z);
-    vec3 onlyPosDiff = max(diff, 0.0);
-    return (maxDiff <= 0.0) ? maxDiff : min(min(onlyPosDiff.x, onlyPosDiff.y), onlyPosDiff.z);
 }
 
 // t.x = outer radius
@@ -578,6 +559,46 @@ float getAO(vec3 p, vec3 n) {
     return clamp(1.0 - AO_K * aoSum, 0.0, 1.0);
 }
 
+const float THICKNESS_DELTA = 4.9;
+const float THICKNESS_K = 0.7;
+
+float getThickness(vec3 p, vec3 n) {
+    float decay = 0.5;
+    float aoSum = 0.0;
+    vec3 samplePt;
+    for (float i = 1.0; i < 5.1; i += 1.0) {
+        samplePt = p - n * i * THICKNESS_DELTA;
+        // if still inside, add
+        //aoSum += decay * ((sdfScene(samplePt) < 0.0) ? 2.0 : 0.0);
+        aoSum += decay * (i * THICKNESS_DELTA - sdfScene(samplePt)) / THICKNESS_DELTA;
+        decay *= 0.5; 
+    }
+    return clamp(THICKNESS_K * aoSum, 0.0, THICKNESS_K);
+}
+
+const vec3 LIGHT_POS = vec3(0.0, 0.0, -5.0) * HOLE_PIECE_SIDE;
+
+float getLambert(vec3 p, vec3 n) {
+    vec3 lightDir = normalize(LIGHT_POS - p);
+    return 0.3 + 0.7 * clamp(dot(lightDir, n), 0.0, 1.0);
+}
+
+float getSSS(vec3 p, vec3 vNormal) {
+    vec3 vLight = normalize(LIGHT_POS - p);
+    vec3 vEye = normalize(u_EyePos - p);
+    const float fLTAmbient = 0.1;
+    const float iLTPower = 2.0;
+    const float fLTDistortion = 0.01;
+    const float fLTScale = 1.6;
+    float dist = distance(LIGHT_POS, p) * 0.05;
+    float fLightAttenuation = min(1.0, pow(dist, -2.0));
+    float fLTThickness = getThickness(p, vNormal);
+    
+    vec3 vLTLight = vLight + vNormal * fLTDistortion;
+    float fLTDot = pow(clamp(dot(vEye, -vLTLight), 0.0, 1.0), iLTPower) * fLTScale;
+    return fLightAttenuation * (fLTDot + fLTAmbient) * fLTThickness;
+}
+
 const float MAX_DIST = 1000.0;
 
 // cake???
@@ -630,8 +651,14 @@ void main() {
     out_Col.xyz = ray.dir * 0.5 + vec3(0.5);
     out_Col.xyz = vec3(0.1);
     Intersection isx = sphereMarch(ray);
-    float ao = getAO(ray.origin + isx.t * ray.dir, isx.normal);
+    vec3 isxPoint = ray.origin + isx.t * ray.dir;
+    float ao = getAO(isxPoint, isx.normal);
+    float lambert = getLambert(isxPoint, isx.normal);
     //float t = jankySqr(ray);
     out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
-    out_Col.xyz *= ao;
+    //out_Col.xyz *= lambert;
+    out_Col.xyz = vec3(lambert);
+    out_Col.xyz = vec3(getSSS(isxPoint, isx.normal));
+    //out_Col.xyz = vec3(getThickness(isxPoint, isx.normal));
+    //out_Col.xyz *= ao;
 }
