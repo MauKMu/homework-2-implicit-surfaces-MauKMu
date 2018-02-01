@@ -22,6 +22,7 @@ https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 
 - http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#surface-normals-and-lighting
 - http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+- http://demofox.org/biasgain.html
 
 ## Objective
 - Gain more experience with GLSL Shader writing and raymarching
