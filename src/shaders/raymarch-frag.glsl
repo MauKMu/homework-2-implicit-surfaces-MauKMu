@@ -414,6 +414,16 @@ float sdfPegBridge(vec3 p) {
     return max(sdfBridge(p), -sdfPegSupportHole(p));
 }
 
+float sdfPegSupportRemover(vec3 p) {
+    vec3 d = abs(p - vec3(1.0, -1.0, 0.0) * HOLE_PIECE_SIDE) - 2.0 * PEG_SUPPORT_DIMS;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float animPegSupport(vec3 p, float time) {
+    float t = clamp(time, 0.0, 1.0);
+    return max(sdfPegSupportHole(p - vec3(0.0, -1.0 + t, 0.0) * HOLE_PIECE_SIDE), -sdfPegSupportRemover(p));
+}
+
 const float BG_LENGTH = 20.0;
 
 float sdfBgBoundary(vec3 p) {
@@ -474,7 +484,11 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   // test peg "bridge"
   float pegBridge = sdfPegBridge(p - PEG_BRIDGE_TRANSLATION);
   // test peg support
-    float pegSupport = sdfPegSupportHole(p - PEG_BRIDGE_TRANSLATION);
+  //float pegSupport = sdfPegSupportHole(p - PEG_BRIDGE_TRANSLATION);
+  float pegSupport = animPegSupport(p - PEG_BRIDGE_TRANSLATION, u_Time * 0.001);
+  // remove peg support (animation)
+  //float pegSupportRemover = sdfPegSupportRemover(p - PEG_BRIDGE_TRANSLATION, u_Time * 0.001);
+  //pegSupport = max(pegSupport, -pegSupportRemover);
   // test left piece
   float left = animHolePiece(p - LEFT_TRANSLATION, u_Time * 0.001);
   // test right piece
@@ -482,6 +496,7 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   // test peg
   float peg = animPeg(p - PEG_TRANSLATION, u_Time * 0.001);
   float partial = min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
+  return partial;
   return min(secondShaft, min(partial, firstShaft));
   return sdfHolePiece(p);
   return sdfCylinder(p, b);
