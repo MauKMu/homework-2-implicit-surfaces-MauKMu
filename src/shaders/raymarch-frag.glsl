@@ -576,10 +576,10 @@ float getThickness(vec3 p, vec3 n) {
     return clamp(THICKNESS_K * aoSum, 0.0, THICKNESS_K);
 }
 
-const vec3 LIGHT_POS = vec3(0.0, 0.0, -5.0) * HOLE_PIECE_SIDE;
+const vec3 LIGHT_POS = vec3(0.0, 0.0, -15.0) * HOLE_PIECE_SIDE;
 
 float getLambert(vec3 p, vec3 n) {
-    vec3 lightDir = normalize(LIGHT_POS - p);
+    vec3 lightDir = normalize(p - LIGHT_POS);
     return 0.3 + 0.7 * clamp(dot(lightDir, n), 0.0, 1.0);
 }
 
@@ -589,8 +589,8 @@ float getSSS(vec3 p, vec3 vNormal) {
     const float fLTAmbient = 0.1;
     const float iLTPower = 2.0;
     const float fLTDistortion = 0.01;
-    const float fLTScale = 1.6;
-    float dist = distance(LIGHT_POS, p) * 0.05;
+    const float fLTScale = 1.3;
+    float dist = distance(LIGHT_POS, p) * 0.03;
     float fLightAttenuation = min(1.0, pow(dist, -2.0));
     float fLTThickness = getThickness(p, vNormal);
     
@@ -654,11 +654,14 @@ void main() {
     vec3 isxPoint = ray.origin + isx.t * ray.dir;
     float ao = getAO(isxPoint, isx.normal);
     float lambert = getLambert(isxPoint, isx.normal);
+    float sss = getSSS(isxPoint, isx.normal);
     //float t = jankySqr(ray);
     out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
-    //out_Col.xyz *= lambert;
-    out_Col.xyz = vec3(lambert);
-    out_Col.xyz = vec3(getSSS(isxPoint, isx.normal));
+    out_Col.xyz = vec3(0.05, 0.7, 0.1);
+    out_Col.xyz *= (lambert * 1.0 + sss * 2.0);
+    //out_Col.xyz *= (lambert);
+    //out_Col.xyz = vec3(sss);
+    //out_Col.xyz = vec3(getSSS(isxPoint, isx.normal));
     //out_Col.xyz = vec3(getThickness(isxPoint, isx.normal));
     //out_Col.xyz *= ao;
 }
