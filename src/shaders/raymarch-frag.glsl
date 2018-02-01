@@ -14,6 +14,16 @@ const float FAR_PLANE = 1000.0;
 const float EPSILON = 0.001;
 const float PI = 3.14159265;
 
+// http://demofox.org/biasgain.html 
+float bias(float t, float bias) {
+  return (t / ((((1.0 / bias) - 2.0) * (1.0 - t)) + 1.0));
+}
+
+float gain(float t, float gain) {
+  return (t < 0.5) ? (bias(t * 2.0, gain) * 0.5)
+                   : (bias(t * 2.0 - 1.0, 1.0 - gain) * 0.5 + 0.5);
+}
+
 struct Ray {
     vec3 origin;
     vec3 dir;
@@ -158,7 +168,7 @@ float sdfShaft(vec3 p) {
 const float NUM_CYCLES = 5.0;
 
 const float LAUNCH_INTERVAL = 0.07;
-const float LAUNCH_END = NUM_CYCLES - 0.22;
+const float LAUNCH_END = NUM_CYCLES - 0.022;
 const float LAUNCH_START = LAUNCH_END - LAUNCH_INTERVAL;
 
 const vec3 LAUNCH_MOVEMENT = vec3(0.0, 0.0, -10.25) * HOLE_PIECE_SIDE;
@@ -173,30 +183,22 @@ const float BACK_START = LAUNCH_END;
 const float BACK_END = BACK_START + 0.5;
 
 const float FALL_ROT_START = LAUNCH_END + 0.5;
-const float FALL_ROT_END = FALL_ROT_START + 1.0;
+const float FALL_ROT_END = FALL_ROT_START + 0.8;
 
-const float FALL_DISP_START = FALL_ROT_START + 0.2;
-const float FALL_DISP_END = FALL_DISP_START + 1.0;
+const float FALL_DISP_START = FALL_ROT_START + 0.05;
+const float FALL_DISP_END = FALL_DISP_START + 0.8;
 
 float animHolePiece(vec3 p, float time) {
-    float tFract = fract(time);
-    float tWhole = time - tFract;
+    float rawFract = fract(time);
+    float tFract = gain(rawFract, 0.91);
+    float tWhole = time - rawFract;
     // compute second half of animation (falling off bridge)
     // moving back before falling
     float tBack = clamp(time, BACK_START, BACK_END) - BACK_START;
     tBack = tBack * 2.0;
     vec3 back = BACK_MOVEMENT * tBack;
-    // fall off while rotating
-    // when first half ends, total translation is toPosition * NUM_CYCLES
-    // add this to back * 1 to get total translation prior to falling off
-    /* OBSOLETE
-    const vec3 transBeforeFall = LEFT_TO_POSITION * NUM_CYCLES + BACK_MOVEMENT;
-    const vec3 toPivotFall = vec3(0.0, -1.0, 0.0) * HOLE_PIECE_SIDE;
-    const vec3 blah = -toPivotFall + transBeforeFall;
-    */
-    // can use this to move back to origin, then to new pivot
     // falling off -- rotation
-    float tFallRot = clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START);
+    float tFallRot = (clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START)) * 1.25;
     float fallAngle = smoothstep(0.05, 0.8, -cos(tFallRot * PI) * 0.5 + 0.5) * PI;
     // rotation about X
     float fallC = cos(fallAngle);
@@ -205,20 +207,21 @@ float animHolePiece(vec3 p, float time) {
                         vec3(0.0, fallC, fallS),
                         vec3(0.0, -fallS, fallC));
     // falling off -- translation
-    float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
-    vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    float tFallDisp = (clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START)) * 1.25;
+    vec3 fallDisp = vec3(0.0, -2.0, -1.5) * HOLE_PIECE_SIDE * vec3(0.0, pow(tFallDisp, 5.0), tFallDisp);
     // move on treadmill
     float tTreadmill = max(time, FALL_DISP_END) - FALL_DISP_END;
     vec3 treadmill = vec3(0.0, 0.0, 3.0) * HOLE_PIECE_SIDE * tTreadmill;
     // "clamp" so first half of animation stops
-    if (tWhole >= NUM_CYCLES) {
+    if (time >= NUM_CYCLES) {
         tWhole = NUM_CYCLES;
         tFract = 0.0;
     }
     const vec3 toPivot = vec3(HOLE_PIECE_SIDE, -HOLE_PIECE_SIDE, 0.0);
     //vec3 toPosition = vec3(2.0 * HOLE_PIECE_SIDE, 0.0, 0.0) * tWhole;
     vec3 toPosition = LEFT_TO_POSITION * tWhole;
-    float angle = smoothstep(0.1, 0.88, cos(tFract * PI) * 0.5 + 0.5) * PI * 0.5;
+    //float angle = smoothstep(0.1, 0.88, cos(tFract * PI) * 0.5 + 0.5) * PI * 0.5;
+    float angle = (1.0 - tFract) * PI * 0.5;
     float c = cos(angle);
     float s = sin(angle);
     // rotation about Z (first half)
@@ -228,7 +231,7 @@ float animHolePiece(vec3 p, float time) {
     //rot = fallRot * rot;
     vec3 transP = toPivot + rot * (p - toPivot + toPosition);
     transP -= back;
-    const vec3 toPivotFall = vec3(0.0, 1.0, 1.9) * HOLE_PIECE_SIDE - vec3(0.0, 0.0, 0.5) * HOLE_PIECE_THICKNESS;
+    const vec3 toPivotFall = vec3(0.0, 1.0, 1.9) * HOLE_PIECE_SIDE - vec3(0.0, 0.0, 1.0) * HOLE_PIECE_THICKNESS;
     if (time > FALL_ROT_START) {
         transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - LEFT_BEFORE_FALL - treadmill;
         //transP = p - LEFT_BEFORE_FALL;
@@ -237,14 +240,16 @@ float animHolePiece(vec3 p, float time) {
 }
 
 float animHolePieceRight(vec3 p, float time) {
-    float tFract = fract(time);
-    float tWhole = time - tFract;
+    float rawFract = fract(time);
+    float tFract = gain(rawFract, 0.91);
+    float tWhole = time - rawFract;
     // moving back before falling
     float tBack = clamp(time, BACK_START, BACK_END) - BACK_START;
     tBack = tBack * 2.0;
     vec3 back = BACK_MOVEMENT * tBack;
     // falling off -- rotation
-    float tFallRot = clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START);
+    //float tFallRot = clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START);
+    float tFallRot = (clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START)) * 1.25;
     float fallAngle = smoothstep(0.05, 0.8, -cos(tFallRot * PI) * 0.5 + 0.5) * PI;
     // rotation about X
     float fallC = cos(fallAngle);
@@ -253,8 +258,9 @@ float animHolePieceRight(vec3 p, float time) {
                         vec3(0.0, fallC, fallS),
                         vec3(0.0, -fallS, fallC));
     // falling off -- translation
-    float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
-    vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    float tFallDisp = (clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START)) * 1.25;
+    //vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    vec3 fallDisp = vec3(0.0, -2.0, -1.5) * HOLE_PIECE_SIDE * vec3(0.0, pow(tFallDisp, 5.0), tFallDisp);
     // move on treadmill
     float tTreadmill = max(time, FALL_DISP_END) - FALL_DISP_END;
     vec3 treadmill = vec3(0.0, 0.0, 3.0) * HOLE_PIECE_SIDE * tTreadmill;
@@ -265,7 +271,8 @@ float animHolePieceRight(vec3 p, float time) {
     }
     const vec3 toPivot = vec3(-3.0, -3.0, 0.0);
     vec3 toPosition = vec3(-6.0, 0.0, 0.0) * tWhole;
-    float angle = -smoothstep(0.1, 0.88, cos(tFract * PI) * 0.5 + 0.5) * PI * 0.5;
+    //float angle = -smoothstep(0.1, 0.88, cos(tFract * PI) * 0.5 + 0.5) * PI * 0.5;
+    float angle = -(1.0 - tFract) * PI * 0.5;
     float c = cos(angle);
     float s = sin(angle);
     mat3 rot = mat3(vec3(c, s, 0.0),
@@ -273,7 +280,7 @@ float animHolePieceRight(vec3 p, float time) {
                     vec3(0.0, 0.0, 1.0));
     vec3 transP = toPivot + rot * (p - toPivot + toPosition);
     transP -= back;
-    const vec3 toPivotFall = vec3(0.0, 1.0, 1.9) * HOLE_PIECE_SIDE - vec3(0.0, 0.0, -0.5 * HOLE_PIECE_THICKNESS);
+    const vec3 toPivotFall = vec3(0.0, 1.0, 1.9) * HOLE_PIECE_SIDE - vec3(0.0, 0.0, -1.0 * HOLE_PIECE_THICKNESS);
     if (time > FALL_ROT_START) {
         transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - RIGHT_BEFORE_FALL - treadmill;
         //transP = p - RIGHT_BEFORE_FALL;
@@ -303,7 +310,8 @@ float animPeg(vec3 p, float time) {
     tBack = tBack * 2.0;
     vec3 back = BACK_MOVEMENT * tBack;
     // falling off -- rotation
-    float tFallRot = clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START);
+    //float tFallRot = clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START);
+    float tFallRot = (clamp(time, FALL_ROT_START, FALL_ROT_END) - (FALL_ROT_START)) * 1.25;
     float fallAngle = smoothstep(0.05, 0.8, -cos(tFallRot * PI) * 0.5 + 0.5) * PI;
     // rotation matrix
     float fallC = cos(fallAngle);
@@ -312,8 +320,9 @@ float animPeg(vec3 p, float time) {
                         vec3(0.0, fallC, fallS),
                         vec3(0.0, -fallS, fallC));
     // falling off -- translation
-    float tFallDisp = clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START);
-    vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    float tFallDisp = (clamp(time, FALL_DISP_START, FALL_DISP_END) - (FALL_DISP_START)) * 1.25;
+    //vec3 fallDisp = vec3(0.0, -2.0, -4.0) * HOLE_PIECE_SIDE * tFallDisp;
+    vec3 fallDisp = vec3(0.0, -2.0, -1.5) * HOLE_PIECE_SIDE * vec3(0.0, pow(tFallDisp, 5.0), tFallDisp);
     // move on treadmill
     float tTreadmill = max(time, FALL_DISP_END) - FALL_DISP_END;
     vec3 treadmill = vec3(0.0, 0.0, 3.0) * HOLE_PIECE_SIDE * tTreadmill;
