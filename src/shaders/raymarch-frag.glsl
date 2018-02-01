@@ -353,7 +353,9 @@ float sdfPanel(vec3 p) {
 }
 
 float animFirstShaft(vec3 p, float time) {
-    float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
+    float tRot = (clamp(time, LAUNCH_START, LAUNCH_END) - LAUNCH_START) / LAUNCH_INTERVAL;
+    tRot = (time > LAUNCH_END) ? (1.0 - 2.0 * clamp(time - LAUNCH_END, 0.0, 0.5)) : tRot;
+    //float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
     float rotAngle = 0.5 + cos(tRot * PI) * 0.5;
     rotAngle *= -PI * 0.33333;
     // rotation matrix (about X)
@@ -369,7 +371,19 @@ float animFirstShaft(vec3 p, float time) {
 const vec3 PANEL_START = vec3(0.0, 0.0, -1.0 * SHAFT_LENGTH);
 
 float animSecondShaft(vec3 p, float time) {
-    float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
+    float tRot = (clamp(time, LAUNCH_START, LAUNCH_END) - LAUNCH_START) / LAUNCH_INTERVAL;
+    tRot = (time > LAUNCH_END) ? (1.0 - 2.0 * clamp(time - LAUNCH_END, 0.0, 0.5)) : tRot;
+    /*
+    float tRot = (clamp(time, LAUNCH_START, LAUNCH_END * 100.0) - LAUNCH_START) / LAUNCH_INTERVAL;
+    float tSin = -sin(tRot);
+    float signFactor = (tSin < 0.0) ? 0.2 : 0.8;
+    tRot *= (tRot < 0.0) ? 0.2 : 0.8; 
+    tRot = (time < LAUNCH_START - 1.0) ? 0.2 :
+           (time < LAUNCH_START) ? 0.2 :
+           (time > LAUNCH_END) ? (0.2 + signFactor * tSin * exp((-time + LAUNCH_END) * 5.0)) :
+           (0.2 + signFactor * tSin);
+           */
+    //float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
     float rotAngle = 0.5 - cos(tRot * PI) * 0.5;
     rotAngle += 5.0;
     rotAngle *= -PI * 0.33333;
@@ -440,7 +454,8 @@ float sdfPegSupportRemover(vec3 p) {
 }
 
 float animPegSupport(vec3 p, float time) {
-    float t = clamp(time, 0.0, 1.0);
+    float t = (time < LAUNCH_END) ? clamp(time, 0.0, 1.0) :
+                                    1.0 - 3.333 * clamp(time - LAUNCH_END, 0.0, 0.3);
     return max(sdfPegSupportHole(p - vec3(0.0, -1.0 + t, 0.0) * HOLE_PIECE_SIDE), -sdfPegSupportRemover(p));
 }
 
@@ -489,12 +504,17 @@ const vec3 RIGHT_TRANSLATION = -LEFT_TRANSLATION + vec3(0.0, 0.0, 2.0 * HOLE_PIE
 const vec3 BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 0.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_TRANSLATION = vec3(0.0, 0.0, 10.25) * HOLE_PIECE_SIDE;
-const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 0.0, 15.0) * HOLE_PIECE_SIDE;
+const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 2.0, 18.0) * HOLE_PIECE_SIDE;
+
+float piecesTime(float t, float start, float end) {
+    return (clamp(t, start, end) - start) / (end - start);
+}
 
 // b = box dimensions
 // r = radius of round parts
 float udfRoundBox(vec3 p, vec3 b, float r)
 {
+  float baseTime = u_Time * 0.001;
   float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, u_Time * 0.001);
   float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, u_Time * 0.001);
   // test carved background
@@ -516,7 +536,6 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   // test peg
   float peg = animPeg(p - PEG_TRANSLATION, u_Time * 0.001);
   float partial = min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
-  return partial;
   return min(secondShaft, min(partial, firstShaft));
   return sdfHolePiece(p);
   return sdfCylinder(p, b);

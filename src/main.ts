@@ -79,6 +79,7 @@ function main() {
     raymarchShader.setInvViewProj(camera.invViewProjMatrix);
     let now = Date.now();
     accTime += now - lastTime;
+    accTime = (accTime > 8 * 1000) ? 0.0 : accTime;
     lastTime = now;
     raymarchShader.setTime(accTime);
 
