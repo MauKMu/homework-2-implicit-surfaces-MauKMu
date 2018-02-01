@@ -508,7 +508,9 @@ const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 2.0, 18.0) * HOLE_PIECE_SIDE;
 
 float getAnimTime(float time) {
     return time < 5.545 ? 0.0 :
-           time < 10.458 ? (time - 5.545) * 2.0 : 0.0;
+           time < 10.458 ? (time - 5.545) * 2.0 : 
+           time < 15.361 ? (time - 10.458) / 0.6 :
+           0.0;
 }
 // b = box dimensions
 // r = radius of round parts
@@ -555,6 +557,25 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   // below gives interesting result w/ r = 1, b = vec3(2, 1, 1)
   return length(min(abs(p)-b,0.0))-r;
   return length(p) - r;
+}
+
+float sdfScene(vec3 p) {
+    return udfRoundBox(p, vec3(0.0), 0.0);
+}
+
+const float AO_DELTA = 0.5;//0.66 * HOLE_PIECE_SIDE;
+const float AO_K = 0.1;
+
+float getAO(vec3 p, vec3 n) {
+    float decay = 0.5;
+    float aoSum = 0.0;
+    vec3 samplePt;
+    for (float i = 1.0; i < 5.1; i += 1.0) {
+        samplePt = p + n * i * AO_DELTA;
+        aoSum += decay * (i * AO_DELTA - sdfScene(samplePt)) / AO_DELTA;
+        decay *= 0.5; 
+    }
+    return clamp(1.0 - AO_K * aoSum, 0.0, 1.0);
 }
 
 const float MAX_DIST = 1000.0;
@@ -609,6 +630,8 @@ void main() {
     out_Col.xyz = ray.dir * 0.5 + vec3(0.5);
     out_Col.xyz = vec3(0.1);
     Intersection isx = sphereMarch(ray);
+    float ao = getAO(ray.origin + isx.t * ray.dir, isx.normal);
     //float t = jankySqr(ray);
     out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
+    out_Col.xyz *= ao;
 }
