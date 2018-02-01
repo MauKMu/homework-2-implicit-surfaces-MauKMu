@@ -659,6 +659,7 @@ void main() {
     out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
     out_Col.xyz = vec3(0.05, 0.7, 0.1);
     out_Col.xyz *= (lambert * 1.0 + sss * 2.0);
+    out_Col.xyz *= ao;
     //out_Col.xyz *= (lambert);
     //out_Col.xyz = vec3(sss);
     //out_Col.xyz = vec3(getSSS(isxPoint, isx.normal));
