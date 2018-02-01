@@ -506,17 +506,18 @@ const vec3 PEG_BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_TRANSLATION = vec3(0.0, 0.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 2.0, 18.0) * HOLE_PIECE_SIDE;
 
-float piecesTime(float t, float start, float end) {
-    return (clamp(t, start, end) - start) / (end - start);
+float getAnimTime(float time) {
+    return time < 5.545 ? 0.0 :
+           time < 10.458 ? (time - 5.545) * 2.0 : 0.0;
 }
-
 // b = box dimensions
 // r = radius of round parts
 float udfRoundBox(vec3 p, vec3 b, float r)
 {
   float baseTime = u_Time * 0.001;
-  float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, u_Time * 0.001);
-  float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, u_Time * 0.001);
+  float animTime = getAnimTime(baseTime);
+  float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, animTime);
+  float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, animTime);
   // test carved background
   float carved = sdfCarvedBg(p - BRIDGE_TRANSLATION);
   // test "bridge"
@@ -525,16 +526,16 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   float pegBridge = sdfPegBridge(p - PEG_BRIDGE_TRANSLATION);
   // test peg support
   //float pegSupport = sdfPegSupportHole(p - PEG_BRIDGE_TRANSLATION);
-  float pegSupport = animPegSupport(p - PEG_BRIDGE_TRANSLATION, u_Time * 0.001);
+  float pegSupport = animPegSupport(p - PEG_BRIDGE_TRANSLATION, animTime);
   // remove peg support (animation)
   //float pegSupportRemover = sdfPegSupportRemover(p - PEG_BRIDGE_TRANSLATION, u_Time * 0.001);
   //pegSupport = max(pegSupport, -pegSupportRemover);
   // test left piece
-  float left = animHolePiece(p - LEFT_TRANSLATION, u_Time * 0.001);
+  float left = animHolePiece(p - LEFT_TRANSLATION, animTime);
   // test right piece
-  float right = animHolePieceRight(p - RIGHT_TRANSLATION, u_Time * 0.001);
+  float right = animHolePieceRight(p - RIGHT_TRANSLATION, animTime);
   // test peg
-  float peg = animPeg(p - PEG_TRANSLATION, u_Time * 0.001);
+  float peg = animPeg(p - PEG_TRANSLATION, animTime);
   float partial = min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
   return min(secondShaft, min(partial, firstShaft));
   return sdfHolePiece(p);

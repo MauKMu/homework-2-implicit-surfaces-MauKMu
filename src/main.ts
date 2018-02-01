@@ -5,6 +5,7 @@ import Square from './geometry/Square';
 import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
+import * as Howler from 'howler';
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
@@ -61,6 +62,10 @@ function main() {
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/raymarch-frag.glsl')),
   ]);
 
+  const sound = new Howler.Howl({
+      src: ['built2scale.wav']
+  });
+  sound.play();
 
   lastTime = Date.now();
 
@@ -79,7 +84,7 @@ function main() {
     raymarchShader.setInvViewProj(camera.invViewProjMatrix);
     let now = Date.now();
     accTime += now - lastTime;
-    accTime = (accTime > 8 * 1000) ? 0.0 : accTime;
+    //accTime = (accTime > 11 * 1000) ? 0.0 : accTime;
     lastTime = now;
     raymarchShader.setTime(accTime);
 
