@@ -321,9 +321,20 @@ const vec3 TO_PIVOT_FIRST_SHAFT = vec3(0.0, 0.0, -SHAFT_LENGTH);
 const float SHAFT_ROT_START = 1.0;
 const float SHAFT_ROT_END = SHAFT_ROT_START + 1.0;
 
+float sdfJoint(vec3 p) {
+    return length(p) - 2.0 * SHAFT_RADIUS;
+}
+
+const vec3 PANEL_DIMS = vec3(3.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_THICKNESS);
+
+float sdfPanel(vec3 p) {
+    vec3 d = abs(p) - PANEL_DIMS;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
 float animFirstShaft(vec3 p, float time) {
     float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
-    float rotAngle = 0.5 - cos(tRot * PI) * 0.5;
+    float rotAngle = 0.5 + cos(tRot * PI) * 0.5;
     rotAngle *= -PI * 0.33333;
     // rotation matrix (about X)
     float c = cos(rotAngle);
@@ -335,9 +346,11 @@ float animFirstShaft(vec3 p, float time) {
     return sdfShaft(transP);
 }
 
+const vec3 PANEL_START = vec3(0.0, 0.0, -1.0 * SHAFT_LENGTH);
+
 float animSecondShaft(vec3 p, float time) {
     float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
-    float rotAngle = 0.5 + cos(tRot * PI) * 0.5;
+    float rotAngle = 0.5 - cos(tRot * PI) * 0.5;
     rotAngle += 5.0;
     rotAngle *= -PI * 0.33333;
     // rotation matrix (about X)
@@ -347,7 +360,7 @@ float animSecondShaft(vec3 p, float time) {
                     vec3(0.0, c, s),
                     vec3(0.0, -s, c));
     // move joint
-    float jointAngle = 0.5 - cos(tRot * PI) * 0.5;
+    float jointAngle = 0.5 + cos(tRot * PI) * 0.5;
     jointAngle *= PI * 0.33333;
     float jointC = cos(jointAngle);
     float jointS = sin(jointAngle);
@@ -355,7 +368,15 @@ float animSecondShaft(vec3 p, float time) {
     const vec3 fse = vec3(0.0, 0.0, -2.0 * SHAFT_LENGTH);
     vec3 secondShaftStart = vec3(fse.x, jointC * fse.y + -jointS * fse.z, jointS * fse.y + jointC * fse.z);
     vec3 transP = -TO_PIVOT_FIRST_SHAFT + rot * (p + TO_PIVOT_FIRST_SHAFT - secondShaftStart);
-    return sdfShaft(transP);
+    // combine shaft and joint
+    float shaft = sdfShaft(transP);
+    vec3 transJoint = secondShaftStart + vec3(0.0, 0.0, SHAFT_LENGTH);
+    float joint = sdfJoint(p - transJoint);
+    // ...and panel
+    //vec3 transPanel = -TO_PIVOT_FIRST_SHAFT + rot * (PANEL_START + TO_PIVOT_FIRST_SHAFT - secondShaftStart);
+    vec3 transPanel = vec3(0.0, 0.0, (1.0 - 4.0 * cos(jointAngle)) * SHAFT_LENGTH);
+    float panel = sdfPanel(p - transPanel);
+    return min(min(shaft, joint), panel);
 }
 
 // BACKGROUND ================
@@ -445,7 +466,7 @@ const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 0.0, 15.0) * HOLE_PIECE_SIDE;
 float udfRoundBox(vec3 p, vec3 b, float r)
 {
   float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, u_Time * 0.001);
-  float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, 0.0, 0.0), u_Time * 0.001);
+  float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, u_Time * 0.001);
   // test carved background
   float carved = sdfCarvedBg(p - BRIDGE_TRANSLATION);
   // test "bridge"
