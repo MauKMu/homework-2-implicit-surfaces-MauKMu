@@ -120,13 +120,13 @@ float sdfHoleCylinder(vec3 p)
 
 const float PEG_LENGTH = 4.0;
 
-float sdfPegBoundary(vec3 p) {
-    vec3 d = abs(p) - vec3(PEG_RADIUS, PEG_RADIUS, PEG_LENGTH);
+float sdfPegBoundary(vec3 p, float time) {
+    vec3 d = abs(p) - vec3(PEG_RADIUS, PEG_RADIUS, (0.2 + 0.8 * time) * PEG_LENGTH);
     return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
-float sdfPeg(vec3 p) {
-    return max(sdfHoleCylinder(p), sdfPegBoundary(p));
+float sdfPeg(vec3 p, float time) {
+    return max(sdfHoleCylinder(p), sdfPegBoundary(p, time));
 }
 
 // FlatCube - HoleCylinder
@@ -283,7 +283,18 @@ float animHolePieceRight(vec3 p, float time) {
 
 const vec3 PEG_BEFORE_FALL = LAUNCH_MOVEMENT + BACK_MOVEMENT;
 
+const float PEG_RAISE_START = 0.0;
+const float PEG_RAISE_END = 1.0;
+
+const float PEG_GROW_START = PEG_RAISE_END;
+const float PEG_GROW_END = PEG_GROW_START + 0.2;
+
 float animPeg(vec3 p, float time) {
+    // raising at start -- translation
+    float tRaiseDisp = clamp(time, PEG_RAISE_START, PEG_RAISE_END) - PEG_RAISE_START;
+    vec3 raiseDisp = vec3(0.0, -1.0 + tRaiseDisp, 0.0) * HOLE_PIECE_SIDE;
+    // raising at start -- scale (pass to sdfPeg to scale bounding volume)
+    float tRaiseScale = (clamp(time, PEG_GROW_START, PEG_GROW_END) - PEG_GROW_START) * 5.0;
     // initial launch
     float tLaunch = (clamp(time, LAUNCH_START, LAUNCH_END) - LAUNCH_START) / LAUNCH_INTERVAL;
     vec3 launch = LAUNCH_MOVEMENT * tLaunch;
@@ -307,13 +318,13 @@ float animPeg(vec3 p, float time) {
     float tTreadmill = max(time, FALL_DISP_END) - FALL_DISP_END;
     vec3 treadmill = vec3(0.0, 0.0, 3.0) * HOLE_PIECE_SIDE * tTreadmill;
     // combine movement
-    vec3 transP = p - launch - back;
+    vec3 transP = p - launch - back - raiseDisp;
     const vec3 toPivotFall = vec3(0.0, 3.0 * PEG_RADIUS, (10.25 + 1.9) * HOLE_PIECE_SIDE);// * PEG_RADIUS;
     if (time > FALL_ROT_START) {
         transP = -toPivotFall + fallRot * (p + toPivotFall - fallDisp) - PEG_BEFORE_FALL - treadmill;
         //transP -= tFallDisp;
     }
-    return sdfPeg(transP);
+    return sdfPeg(transP, tRaiseScale);
 }
 
 const vec3 TO_PIVOT_FIRST_SHAFT = vec3(0.0, 0.0, -SHAFT_LENGTH);
