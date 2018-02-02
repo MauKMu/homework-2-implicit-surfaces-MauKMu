@@ -10,6 +10,9 @@ uniform float u_TimeAux1;
 uniform float u_TimeAux2;
 uniform float u_TimeAux3;
 uniform float u_TimeAux4;
+uniform float u_TimeAux5;
+uniform int u_RenderMode;
+uniform int u_BaseShape;
 
 out vec4 out_Col;
 
@@ -346,8 +349,12 @@ const vec3 REP_Y_OFFSET = vec3(0.0, HOLE_PIECE_SIDE, 0.0);
 float repBgCube(vec3 p) {
     vec3 c = vec3(2.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE);
     vec3 q = mod(p - REP_Y_OFFSET, c) - 0.5 * c;
-    //return length(q) - (HOLE_PIECE_SIDE * 0.99);
-    return sdfBgCube(q);
+    if (u_BaseShape == 0) {
+        return sdfBgCube(q);
+    }
+    else {
+        return length(q) - (HOLE_PIECE_SIDE * 0.99);
+    }
 }
 
 float sdfBridgeBoundary(vec3 p) {
@@ -440,7 +447,6 @@ const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 2.0, 18.0) * HOLE_PIECE_SIDE;
 // r = radius of round parts
 float udfRoundBox(vec3 p, vec3 b, float r, inout vec3 color)
 {
-  float animTime = u_Time;//getAnimTime(baseTime);
   float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, u_TimeAux4);
   float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, u_TimeAux4);
   // test carved background
@@ -515,14 +521,15 @@ float getThickness(vec3 p, vec3 n) {
     return clamp(THICKNESS_K * aoSum, 0.0, THICKNESS_K);
 }
 
-const vec3 LIGHT_POS = vec3(0.0, 0.0, -15.0) * HOLE_PIECE_SIDE;
 
 float getLambert(vec3 p, vec3 n) {
+vec3 LIGHT_POS = vec3(0.0, 0.0 + 5.0 * (cos(u_TimeAux5) * 0.5 + 0.5), -15.0) * HOLE_PIECE_SIDE;
     vec3 lightDir = normalize(p - LIGHT_POS);
     return 0.3 + 0.7 * clamp(dot(lightDir, n), 0.0, 1.0);
 }
 
 float getSSS(vec3 p, vec3 vNormal) {
+vec3 LIGHT_POS = vec3(0.0, 0.0 + 5.0 * (cos(u_TimeAux5) * 0.5 + 0.5), -15.0) * HOLE_PIECE_SIDE;
     vec3 vLight = normalize(LIGHT_POS - p);
     vec3 vEye = normalize(u_EyePos - p);
     const float fLTAmbient = 0.1;
@@ -581,7 +588,7 @@ vec3 getBG(in Ray ray) {
     //t = (t > 0.7) ? 0.0 : smoothstep(0.3, 0.71, t);
     t = 1.0 - smoothstep(0.0, 0.6, abs(0.8 - t));
     vec3 baseColor = ray.dir * 0.5 + vec3(0.5);
-    const vec3 altColor = vec3(0.0, 0.9, 0.0);//vec3(1.0) - baseColor;
+    const vec3 altColor = vec3(0.0, 0.7, 0.0);//vec3(1.0) - baseColor;
     return mix(baseColor, altColor, t);
 }
 
@@ -603,9 +610,21 @@ void main() {
     float sss = getSSS(isxPoint, isx.normal);
     //out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
     //out_Col.xyz = vec3(0.05, 0.7, 0.1);
-    out_Col.xyz = (isx.t == -1.0 || isx.t == MAX_DIST) ? getBG(ray) : isx.color;
-    out_Col.xyz *= (lambert * 1.0 + sss * 2.0);
-    out_Col.xyz *= ao;
+    out_Col.xyz = isx.color;
+    if (u_RenderMode == 0) {
+        out_Col.xyz *= (lambert + sss * 2.0);
+        out_Col.xyz *= ao;
+    }
+    else if (u_RenderMode == 1) {
+        out_Col.xyz *= ao;
+    }
+    else if (u_RenderMode == 2) {
+        out_Col.xyz *= (sss * 2.0);
+    }
+    else {
+        out_Col.xyz *= (lambert);
+    }
+    out_Col.xyz = (isx.t == -1.0 || isx.t == MAX_DIST) ? getBG(ray) : out_Col.xyz;
     //out_Col.xyz *= (lambert);
     //out_Col.xyz = vec3(sss);
     //out_Col.xyz = vec3(getSSS(isxPoint, isx.normal));

@@ -7,18 +7,50 @@ import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 import * as Howler from 'howler';
 
+enum RenderMode {
+    FULL = 0,
+    AO_ONLY,
+    SSS_ONLY,
+    LAMBERT_ONLY,
+}
+
+enum BaseShape {
+    CUBE = 0,
+    SPHERE,
+}
+
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
   // TODO: add any controls you want
+  'Play!': playScene,
+  renderMode: RenderMode.FULL,
+  baseShape: BaseShape.CUBE,
 };
 
 let screenQuad: Square;
 
+let sound: Howl;
+let lastTime: number;
+let accTime: number;
+
+let playing: boolean;
+
+function playScene() {
+    if (sound.playing()) {
+        sound.stop();
+    }
+    lastTime = Date.now();
+    sound.play();
+    accTime = 0;
+    playing = true;
+}
+
 function main() {
+  playing = false;
   // Time-keeping variables
-  let lastTime = 0;
-  let accTime = 0;
+  lastTime = 0;
+  accTime = 0;
 
   // Initial display for framerate
   const stats = Stats();
@@ -31,6 +63,9 @@ function main() {
   // TODO: add any controls you need to the gui
   const gui = new DAT.GUI();
   // E.G. gui.add(controls, 'tesselations', 0, 8).step(1);
+  //gui.add(controls, 'Play!'); // doesn't work!!
+  gui.add(controls, 'renderMode', { 'Full Shading': RenderMode.FULL, 'AO only': RenderMode.AO_ONLY, 'SSS only': RenderMode.SSS_ONLY, 'Lambert only': RenderMode.LAMBERT_ONLY });
+  gui.add(controls, 'baseShape', { 'Cube': BaseShape.CUBE, 'Sphere': BaseShape.SPHERE });
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -52,7 +87,7 @@ function main() {
   screenQuad.create();
 
   // Camera(position, target)
-  const camera = new Camera(vec3.fromValues(0, 0, 5), vec3.fromValues(0, 0, 0));
+  const camera = new Camera(vec3.fromValues(-30, 50, 80), vec3.fromValues(5, -5, 15));//, vec3.fromValues(0, 0, 0));
 
   gl.clearColor(0.0, 0.0, 0.0, 1);
   gl.disable(gl.DEPTH_TEST);
@@ -62,45 +97,8 @@ function main() {
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/raymarch-frag.glsl')),
   ]);
 
-
-  /* monolithic function
-
-  function getAnimTime(time: number) {
-    return time < 5.545 ? 0.0 :
-           time < 10.458 ? (time - 5.545) * 2.0 : 
-           time < 15.361 ? (time - 10.458) / 0.6 :
-           time < 20.259 ? (time - 15.361) * 2.0 : 
-           time < 22.546 ? (time - 20.259) / 0.45 : 
-           time < 25.158 ? (time - 22.546) / 0.366 : 
-           time < 30.056 ? (time - 25.158) / 0.506 : 
-           time < 34.954 ? (time - 30.056) / 0.506 : 
-           time < 39.852 ? (time - 34.954) / 0.486 : 
-           time < 42.163 ? (time - 39.852) / 0.471 : 
-           time < 49.182 ? (time - 42.163) / 0.331 : 
-           time < 51.057 ? (time - 49.182) / 0.486 : 
-           time < 52.872 ? (time - 51.057) / 0.431 : 
-           time < 54.481 ? (time - 52.872) / 0.376 : 
-           time < 56.527 ? (time - 54.481) / 0.361 : 
-           time < 58.362 ? (time - 56.527) / 0.371 : 
-           time < 60.167 ? (time - 58.362) / 0.386 : 
-           time < 61.756 ? (time - 60.167) / 0.386 : 
-           time < 63.566 ? (time - 61.756) / 0.256 : 
-           time < 67.206 ? (time - 63.566) / 0.371 : 
-           time < 70.840 ? (time - 67.206) / 0.481 : 
-           time < 74.480 ? (time - 70.840) / 0.366 : 
-           time < 76.195 ? (time - 74.480) / 0.371 : 
-           time < 79.945 ? (time - 76.195) / 0.256 : 
-           time < 81.765 ? (time - 79.945) / 0.356 : 
-           time < 83.580 ? (time - 81.765) / 0.356 : 
-           time < 85.856 ? (time - 83.580) / 0.471 : 
-           time < 87.219 ? (time - 85.856) / 0.256 : 
-           time < 89.029 ? (time - 87.219) / 0.361 : 
-           time < 90.849 ? (time - 89.029) / 0.361 : 
-           time < 92.448 ? (time - 90.849) / 0.361 : 
-           time < 99.999 ? (time - 92.448) / 0.917 :
-                           ((time - 99.999) % 4.0) / 0.5;
-  } 
-    */
+  raymarchShader.setRenderMode(RenderMode.FULL);
+  raymarchShader.setBaseShape(BaseShape.CUBE);
 
   function getAnimTimePanel(time: number) {
     return time < 5.545 ? 0.0 :
@@ -281,155 +279,14 @@ function main() {
            //time < 99.999 ? (time - 92.448) / 0.927 :
                            //((time - 99.999) % 4.0) / 0.5;
   } 
-    /*
-  function getAnimTime(time: number) {
-    return time < 10.458 ? 0.0 :
-           //time < 10.458 ? (time - 5.545) * 2.0 : 
-           time < 25.158 ? (time - 10.458) / 0.6 :
-           //time < 20.259 ? (time - 15.361) * 2.0 : 
-           //time < 22.546 ? (time - 20.259) / 0.45 : 
-           //time < 25.158 ? (time - 22.546) / 0.366 : 
-           time < 42.163 ? (time - 25.158) / 0.506 : 
-           //time < 34.954 ? (time - 30.056) / 0.506 : 
-           //time < 39.852 ? (time - 34.954) / 0.486 : 
-           //time < 42.163 ? (time - 39.852) / 0.471 : 
-           time < 54.481 ? (time - 42.163) / 0.331 : 
-           //time < 51.057 ? (time - 49.182) / 0.486 : 
-           //time < 52.872 ? (time - 51.057) / 0.431 : 
-           //time < 54.481 ? (time - 52.872) / 0.376 : 
-           time < 61.756 ? (time - 54.481) / 0.361 : 
-           //time < 58.362 ? (time - 56.527) / 0.371 : 
-           //time < 60.167 ? (time - 58.362) / 0.386 : 
-           //time < 61.756 ? (time - 60.167) / 0.386 : 
-           time < 74.480 ? (time - 61.756) / 0.256 : 
-           //time < 67.206 ? (time - 63.566) / 0.371 : 
-           //time < 70.840 ? (time - 67.206) / 0.481 : 
-           //time < 74.480 ? (time - 70.840) / 0.366 : 
-           time < 83.580 ? (time - 74.480) / 0.371 : 
-           //time < 79.945 ? (time - 76.195) / 0.256 : 
-           //time < 81.765 ? (time - 79.945) / 0.356 : 
-           //time < 83.580 ? (time - 81.765) / 0.356 : 
-           time < 90.849 ? (time - 83.580) / 0.471 : 
-           //time < 87.219 ? (time - 85.856) / 0.256 : 
-           //time < 89.029 ? (time - 87.219) / 0.361 : 
-           //time < 90.849 ? (time - 89.029) / 0.361 : 
-           (time - 90.849) / 0.361;
-           //time < 99.999 ? (time - 92.448) / 0.917 :
-                           //((time - 99.999) % 4.0) / 0.5;
-  } 
 
-  function getAnimTime1(time: number) {
-    return time < 5.545 ? 0.0 :
-           time < 22.546 ? (time - 5.545) * 2.0 : 
-           //time < 15.361 ? (time - 10.458) / 0.6 :
-           //time < 20.259 ? (time - 15.361) * 2.0 : 
-           //time < 22.546 ? (time - 20.259) / 0.45 : 
-           time < 39.852 ? (time - 22.546) / 0.366 : 
-           //time < 30.056 ? (time - 25.158) / 0.506 : 
-           //time < 34.954 ? (time - 30.056) / 0.506 : 
-           //time < 39.852 ? (time - 34.954) / 0.486 : 
-           time < 52.872 ? (time - 39.852) / 0.471 : 
-           //time < 49.182 ? (time - 42.163) / 0.331 : 
-           //time < 51.057 ? (time - 49.182) / 0.486 : 
-           //time < 52.872 ? (time - 51.057) / 0.431 : 
-           time < 60.167 ? (time - 52.872) / 0.376 : 
-           //time < 56.527 ? (time - 54.481) / 0.361 : 
-           //time < 58.362 ? (time - 56.527) / 0.371 : 
-           //time < 60.167 ? (time - 58.362) / 0.386 : 
-           time < 70.840 ? (time - 60.167) / 0.386 : 
-           //time < 63.566 ? (time - 61.756) / 0.256 : 
-           //time < 67.206 ? (time - 63.566) / 0.371 : 
-           //time < 70.840 ? (time - 67.206) / 0.481 : 
-           time < 81.765 ? (time - 70.840) / 0.366 : 
-           //time < 76.195 ? (time - 74.480) / 0.371 : 
-           //time < 79.945 ? (time - 76.195) / 0.256 : 
-           //time < 81.765 ? (time - 79.945) / 0.356 : 
-           time < 89.029 ? (time - 81.765) / 0.356 : 
-           //time < 85.856 ? (time - 83.580) / 0.471 : 
-           //time < 87.219 ? (time - 85.856) / 0.256 : 
-           //time < 89.029 ? (time - 87.219) / 0.361 : 
-           (time - 89.029) / 0.361;
-           //time < 92.448 ? (time - 90.849) / 0.361 : 0.0;
-           //time < 99.999 ? (time - 92.448) / 0.917 :
-  } 
-
-  function getAnimTime2(time: number) {
-    return time < 15.361 ? 0.0 :
-           //time < 10.458 ? (time - 5.545) * 2.0 : 
-           //time < 15.361 ? (time - 10.458) / 0.6 :
-           time < 30.056 ? (time - 15.361) * 2.0 : 
-           //time < 22.546 ? (time - 20.259) / 0.45 : 
-           //time < 25.158 ? (time - 22.546) / 0.366 : 
-           //time < 30.056 ? (time - 25.158) / 0.506 : 
-           time < 49.182 ? (time - 30.056) / 0.506 : 
-           //time < 39.852 ? (time - 34.954) / 0.486 : 
-           //time < 42.163 ? (time - 39.852) / 0.471 : 
-           //time < 49.182 ? (time - 42.163) / 0.331 : 
-           time < 56.527 ? (time - 49.182) / 0.486 : 
-           //time < 52.872 ? (time - 51.057) / 0.431 : 
-           //time < 54.481 ? (time - 52.872) / 0.376 : 
-           //time < 56.527 ? (time - 54.481) / 0.361 : 
-           time < 63.566 ? (time - 56.527) / 0.371 : 
-           //time < 60.167 ? (time - 58.362) / 0.386 : 
-           //time < 61.756 ? (time - 60.167) / 0.386 : 
-           //time < 63.566 ? (time - 61.756) / 0.256 : 
-           time < 76.195 ? (time - 63.566) / 0.371 : 
-           //time < 70.840 ? (time - 67.206) / 0.481 : 
-           //time < 74.480 ? (time - 70.840) / 0.366 : 
-           //time < 76.195 ? (time - 74.480) / 0.371 : 
-           time < 85.856 ? (time - 76.195) / 0.256 : 
-           //time < 81.765 ? (time - 79.945) / 0.356 : 
-           //time < 83.580 ? (time - 81.765) / 0.356 : 
-           //time < 85.856 ? (time - 83.580) / 0.471 : 
-           time < 92.448 ? (time - 85.856) / 0.256 : 
-           //time < 89.029 ? (time - 87.219) / 0.361 : 
-           //time < 90.849 ? (time - 89.029) / 0.361 : 
-           //time < 92.448 ? (time - 90.849) / 0.361 : 
-           (time - 92.448) / 0.917;
-                           //((time - 99.999) % 4.0) / 0.5;
-  } 
-    look bad: 2, 4, 7, 
-  function getAnimTime3(time: number) {
-    return time < 20.259 ? 0.0 :
-           //time < 10.458 ? (time - 5.545) * 2.0 : 
-           //time < 15.361 ? (time - 10.458) / 0.6 :
-           //time < 20.259 ? (time - 15.361) * 2.0 : 
-           time < 34.954 ? (time - 20.259) / 0.45 : 
-           //time < 25.158 ? (time - 22.546) / 0.366 : 
-           //time < 30.056 ? (time - 25.158) / 0.506 : 
-           //time < 34.954 ? (time - 30.056) / 0.506 : 
-           time < 51.057 ? (time - 34.954) / 0.486 : 
-           //time < 42.163 ? (time - 39.852) / 0.471 : 
-           //time < 49.182 ? (time - 42.163) / 0.331 : 
-           //time < 51.057 ? (time - 49.182) / 0.486 : 
-           time < 58.362 ? (time - 51.057) / 0.431 : 
-           //time < 54.481 ? (time - 52.872) / 0.376 : 
-           //time < 56.527 ? (time - 54.481) / 0.361 : 
-           //time < 58.362 ? (time - 56.527) / 0.371 : 
-           time < 67.206 ? (time - 58.362) / 0.386 : 
-           //time < 61.756 ? (time - 60.167) / 0.386 : 
-           //time < 63.566 ? (time - 61.756) / 0.256 : 
-           //time < 67.206 ? (time - 63.566) / 0.371 : 
-           time < 79.945 ? (time - 67.206) / 0.481 : 
-           //time < 74.480 ? (time - 70.840) / 0.366 : 
-           //time < 76.195 ? (time - 74.480) / 0.371 : 
-           //time < 79.945 ? (time - 76.195) / 0.256 : 
-           time < 87.219 ? (time - 79.945) / 0.356 : 
-           //time < 83.580 ? (time - 81.765) / 0.356 : 
-           //time < 85.856 ? (time - 83.580) / 0.471 : 
-           //time < 87.219 ? (time - 85.856) / 0.256 : 
-           time < 99.999 ? (time - 87.219) / 0.361 : 
-           //time < 90.849 ? (time - 89.029) / 0.361 : 
-           //time < 92.448 ? (time - 90.849) / 0.361 : 
-           //time < 99.999 ? (time - 92.448) / 0.917 :
-                           ((time - 99.999) % 4.0) / 0.5;
-  } 
-    */
+  raymarchShader.setTimes(0, -100, -100, -100, 0, 0);
 
   // Sound using Howler
-  const sound = new Howler.Howl({
+  sound = new Howler.Howl({
       src: ['built2scale.wav']
   });
+
   sound.play();
 
   lastTime = Date.now();
@@ -447,14 +304,16 @@ function main() {
     raymarchShader.setDims(vec2.fromValues(canvas.width, canvas.height));
     raymarchShader.setEyePos(camera.controls.eye);
     raymarchShader.setInvViewProj(camera.invViewProjMatrix);
+    raymarchShader.setRenderMode(controls.renderMode);
+    raymarchShader.setBaseShape(controls.baseShape);
+
     let now = Date.now();
     accTime += now - lastTime;
     //accTime = (accTime > 11 * 1000) ? 0.0 : accTime;
     lastTime = now;
     //raymarchShader.setTime(getAnimTime(accTime * 0.001));
     let tScaled = accTime * 0.001;
-    //raymarchShader.setTimes(getAnimTime(tScaled), getAnimTime1(tScaled), getAnimTime2(tScaled), getAnimTime3(tScaled), 0);
-    raymarchShader.setTimes(getAnimTimeRaw(tScaled), getAnimTime1(tScaled), getAnimTime2(tScaled), getAnimTime3(tScaled), getAnimTimePanel(tScaled));
+    raymarchShader.setTimes(getAnimTimeRaw(tScaled), getAnimTime1(tScaled), getAnimTime2(tScaled), getAnimTime3(tScaled), getAnimTimePanel(tScaled), tScaled);
 
     // March!
     raymarchShader.draw(screenQuad);

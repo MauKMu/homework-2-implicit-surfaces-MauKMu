@@ -30,8 +30,11 @@ class ShaderProgram {
   unifTimeAux2: WebGLUniformLocation;
   unifTimeAux3: WebGLUniformLocation;
   unifTimeAux4: WebGLUniformLocation;
+  unifTimeAux5: WebGLUniformLocation;
   unifInvViewProj: WebGLUniformLocation;
   unifEyePos: WebGLUniformLocation;
+  unifRenderMode: WebGLUniformLocation;
+  unifBaseShape: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -55,8 +58,11 @@ class ShaderProgram {
     this.unifTimeAux2      = gl.getUniformLocation(this.prog, "u_TimeAux2");
     this.unifTimeAux3      = gl.getUniformLocation(this.prog, "u_TimeAux3");
     this.unifTimeAux4      = gl.getUniformLocation(this.prog, "u_TimeAux4");
+    this.unifTimeAux5      = gl.getUniformLocation(this.prog, "u_TimeAux5");
     this.unifInvViewProj   = gl.getUniformLocation(this.prog, "u_InvViewProj");
     this.unifEyePos        = gl.getUniformLocation(this.prog, "u_EyePos");
+    this.unifRenderMode    = gl.getUniformLocation(this.prog, "u_RenderMode");
+    this.unifBaseShape     = gl.getUniformLocation(this.prog, "u_BaseShape");
   }
 
   use() {
@@ -80,7 +86,7 @@ class ShaderProgram {
     }
   }
 
-  setTimes(time: number, time1: number, time2: number, time3: number, time4: number) {
+  setTimes(time: number, time1: number, time2: number, time3: number, time4: number, time5: number) {
     this.use();
     if (this.unifTime != -1) {
       gl.uniform1f(this.unifTime, time);
@@ -96,6 +102,23 @@ class ShaderProgram {
     }
     if (this.unifTimeAux4 != -1) {
       gl.uniform1f(this.unifTimeAux4, time4);
+    }
+    if (this.unifTimeAux5 != 1) {
+      gl.uniform1f(this.unifTimeAux5, time5);          
+    }
+  }
+
+  setRenderMode(mode: number) {
+    this.use();
+    if (this.unifRenderMode != -1) {
+      gl.uniform1i(this.unifRenderMode, mode);
+    }
+  }
+
+  setBaseShape(shape: number) {
+    this.use();
+    if (this.unifBaseShape != -1) {
+      gl.uniform1i(this.unifBaseShape, shape);
     }
   }
 
