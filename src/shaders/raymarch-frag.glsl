@@ -346,6 +346,7 @@ const vec3 REP_Y_OFFSET = vec3(0.0, HOLE_PIECE_SIDE, 0.0);
 float repBgCube(vec3 p) {
     vec3 c = vec3(2.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE);
     vec3 q = mod(p - REP_Y_OFFSET, c) - 0.5 * c;
+    //return length(q) - (HOLE_PIECE_SIDE * 0.99);
     return sdfBgCube(q);
 }
 
@@ -356,6 +357,11 @@ float sdfBridgeBoundary(vec3 p) {
 
 float sdfBridge(vec3 p) {
     return max(repBgCube(p), sdfBridgeBoundary(p));
+}
+
+float sdfBridgeRemover(vec3 p) {
+    vec3 d = abs(p) - vec3(11.0 * HOLE_PIECE_SIDE, 1.5 * HOLE_PIECE_SIDE, 2.0 * HOLE_PIECE_SIDE);
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
 const vec3 PEG_SUPPORT_DIMS = vec3(HOLE_PIECE_SIDE, HOLE_PIECE_SIDE - PEG_RADIUS, HOLE_PIECE_SIDE);
@@ -411,18 +417,21 @@ float sdfFourthLevelBoundary(vec3 p) {
     return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
+const vec3 BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 0.25) * HOLE_PIECE_SIDE;
+const vec3 BRIDGE_TOP_REMOVER_TRANSLATION = BRIDGE_TRANSLATION + vec3(1.0, 4.0, 0.0) * HOLE_PIECE_SIDE;//vec3(-1.0, 0.0, 0.25) * HOLE_PIECE_SIDE;
+
 float sdfCarvedBg(vec3 p) {
     float uncarved = sdfBoundedBgCubes(p);
     float first = sdfFirstLevelBoundary(p - vec3(1.0, 1.0, 0.0) * HOLE_PIECE_SIDE);
     float second = sdfSecondLevelBoundary(p - vec3(1.0, 2.0, 0.0) * HOLE_PIECE_SIDE);
     float third = sdfThirdLevelBoundary(p - vec3(1.0, 3.0, 0.0) * HOLE_PIECE_SIDE);
     float fourth = sdfFourthLevelBoundary(p - vec3(1.0, 4.0, 0.0) * HOLE_PIECE_SIDE);
-    return max(max(max(max(uncarved, -first), -second), -third), -fourth);
+    float bridgeRemover = sdfBridgeRemover(p - BRIDGE_TOP_REMOVER_TRANSLATION);
+    return max(max(max(max(max(uncarved, -first), -second), -third), -fourth), -bridgeRemover);
 }
 
 const vec3 LEFT_TRANSLATION = vec3((NUM_CYCLES - 1.0) * 6.0, 0.0, 0.0);
 const vec3 RIGHT_TRANSLATION = -LEFT_TRANSLATION + vec3(0.0, 0.0, 2.0 * HOLE_PIECE_THICKNESS);
-const vec3 BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 0.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_TRANSLATION = vec3(0.0, 0.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 2.0, 18.0) * HOLE_PIECE_SIDE;

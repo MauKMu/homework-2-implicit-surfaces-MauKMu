@@ -175,7 +175,7 @@ function main() {
   } 
 
   function getAnimTime1(time: number) {
-    return time < 5.545 ? 0.0 :
+    return time < 5.545 ? 100.0 :
            time < 20.259 ? (time - 5.545) * 2.0 : 
            //time < 15.361 ? (time - 10.458) / 0.6 :
            //time < 20.259 ? (time - 15.361) * 2.0 : 
@@ -211,7 +211,7 @@ function main() {
   } 
 
   function getAnimTime2(time: number) {
-    return time < 10.458 ? 0.0 :
+    return time < 10.458 ? 100.0 :
            //time < 10.458 ? (time - 5.545) * 2.0 : 
            time < 22.546 ? (time - 10.458) / 0.622 :
            //time < 20.259 ? (time - 15.361) * 2.0 : 
@@ -247,7 +247,7 @@ function main() {
   } 
 
   function getAnimTime3(time: number) {
-    return time < 15.361 ? 0.0 :
+    return time < 15.361 ? 100.0 :
            //time < 10.458 ? (time - 5.545) * 2.0 : 
            //time < 15.361 ? (time - 10.458) / 0.6 :
            time < 25.158 ? (time - 15.361) * 2.0 : 
