@@ -427,53 +427,13 @@ const vec3 PEG_BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_TRANSLATION = vec3(0.0, 0.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 2.0, 18.0) * HOLE_PIECE_SIDE;
 
-/*
-float getAnimTime(float time) {
-    return time < 5.545 ? 0.0 :
-           time < 10.458 ? (time - 5.545) * 2.0 : 
-           time < 15.361 ? (time - 10.458) / 0.6 :
-           time < 20.259 ? (time - 15.361) * 2.0 : 
-           time < 22.546 ? (time - 20.259) / 0.45 : 
-           time < 25.158 ? (time - 22.546) / 0.366 : 
-           time < 30.056 ? (time - 25.158) / 0.506 : 
-           time < 34.954 ? (time - 30.056) / 0.506 : 
-           time < 39.852 ? (time - 34.954) / 0.486 : 
-           time < 42.163 ? (time - 39.852) / 0.471 : 
-           time < 49.182 ? (time - 42.163) / 0.331 : 
-           time < 51.057 ? (time - 49.182) / 0.486 : 
-           time < 52.872 ? (time - 51.057) / 0.431 : 
-           time < 54.481 ? (time - 52.872) / 0.376 : 
-           time < 56.527 ? (time - 54.481) / 0.361 : 
-           time < 58.362 ? (time - 56.527) / 0.371 : 
-           time < 60.167 ? (time - 58.362) / 0.386 : 
-           time < 61.756 ? (time - 60.167) / 0.386 : 
-           time < 63.566 ? (time - 61.756) / 0.256 : 
-           time < 67.206 ? (time - 63.566) / 0.371 : 
-           time < 70.840 ? (time - 67.206) / 0.481 : 
-           time < 74.480 ? (time - 70.840) / 0.366 : 
-           time < 76.195 ? (time - 74.480) / 0.371 : 
-           time < 79.945 ? (time - 76.195) / 0.256 : 
-           time < 81.765 ? (time - 79.945) / 0.356 : 
-           time < 83.580 ? (time - 81.765) / 0.356 : 
-           time < 85.856 ? (time - 83.580) / 0.471 : 
-           time < 87.219 ? (time - 85.856) / 0.256 : 
-           time < 89.029 ? (time - 87.219) / 0.361 : 
-           time < 90.849 ? (time - 89.029) / 0.361 : 
-           time < 92.448 ? (time - 90.849) / 0.361 : 
-                           (time - 92.448) / 0.917 ;
-           //time < 99.999 ? (time - 92.448) / 0.917 :
-                           //mod(time - 99.999, 4.0) / 0.5;
-}
-*/
-
 // b = box dimensions
 // r = radius of round parts
 float udfRoundBox(vec3 p, vec3 b, float r, inout vec3 color)
 {
-  float baseTime = u_Time * 0.001;
   float animTime = u_Time;//getAnimTime(baseTime);
-  float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, animTime);
-  float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, animTime);
+  float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, u_TimeAux4);
+  float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, u_TimeAux4);
   // test carved background
   float carved = sdfCarvedBg(p - BRIDGE_TRANSLATION);
   // test "bridge"
@@ -482,17 +442,26 @@ float udfRoundBox(vec3 p, vec3 b, float r, inout vec3 color)
   float pegBridge = sdfPegBridge(p - PEG_BRIDGE_TRANSLATION);
   // test peg support
   //float pegSupport = sdfPegSupportHole(p - PEG_BRIDGE_TRANSLATION);
-  float pegSupport = animPegSupport(p - PEG_BRIDGE_TRANSLATION, animTime);
-  // remove peg support (animation)
-  //float pegSupportRemover = sdfPegSupportRemover(p - PEG_BRIDGE_TRANSLATION, u_Time * 0.001);
-  //pegSupport = max(pegSupport, -pegSupportRemover);
+  float pegSupport = animPegSupport(p - PEG_BRIDGE_TRANSLATION, u_Time);
   // test left piece
-  float left = animHolePiece(p - LEFT_TRANSLATION, animTime);
+  float left = animHolePiece(p - LEFT_TRANSLATION, u_TimeAux3);
   // test right piece
-  float right = animHolePieceRight(p - RIGHT_TRANSLATION, animTime);
+  float right = animHolePieceRight(p - RIGHT_TRANSLATION, u_TimeAux3);
   // test peg
-  float peg = animPeg(p - PEG_TRANSLATION, animTime);
-  float whiteParts = min(left, min(right, min(peg, min(firstShaft, secondShaft))));
+  float peg = animPeg(p - PEG_TRANSLATION, u_TimeAux3);
+  float piece0 = min(left, min(right, peg));
+  // second piece
+  float left1 = animHolePiece(p - LEFT_TRANSLATION, u_TimeAux1);
+  float right1 = animHolePieceRight(p - RIGHT_TRANSLATION, u_TimeAux1);
+  float peg1 = animPeg(p - PEG_TRANSLATION, u_TimeAux1);
+  float piece1 = min(left1, min(right1, peg1));
+  // third piece
+  float left2 = animHolePiece(p - LEFT_TRANSLATION, u_TimeAux2);
+  float right2 = animHolePieceRight(p - RIGHT_TRANSLATION, u_TimeAux2);
+  float peg2 = animPeg(p - PEG_TRANSLATION, u_TimeAux2);
+  float piece2 = min(left2, min(right2, peg2));
+  // combine all
+  float whiteParts = min(piece2, min(piece1, min(piece0, min(firstShaft, secondShaft))));
   //float partial = min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
   float scene = min(whiteParts, min(pegSupport, min(pegBridge, min(carved, bridge))));
   //float scene = min(secondShaft, min(partial, firstShaft));
@@ -571,7 +540,7 @@ Intersection sphereMarch(in Ray r) {
     isx.t = -1.0;
     isx.normal = vec3(1.0, -1.0, -1.0);
     vec3 color;
-    for (int i = 0; i < 300; i++) {
+    for (int i = 0; i < 200; i++) {
         vec3 p = r.origin + t * r.dir;
         vec3 dims = vec3(1.0, 1.0, 1.0 + (cos(u_Time * 0.001) * 0.5 + 0.5));
         dims.xy = dims.zz;

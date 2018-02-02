@@ -94,8 +94,8 @@ class ShaderProgram {
     if (this.unifTimeAux3 != -1) {
       gl.uniform1f(this.unifTimeAux3, time3);
     }
-    if (this.unifTimeAux3 != -1) {
-      gl.uniform1f(this.unifTimeAux3, time3);
+    if (this.unifTimeAux4 != -1) {
+      gl.uniform1f(this.unifTimeAux4, time4);
     }
   }
 
