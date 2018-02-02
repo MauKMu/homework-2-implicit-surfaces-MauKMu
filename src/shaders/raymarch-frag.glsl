@@ -6,6 +6,10 @@ uniform vec2 u_Dims;
 uniform vec3 u_EyePos;
 uniform mat4 u_InvViewProj;
 uniform float u_Time;
+uniform float u_TimeAux1;
+uniform float u_TimeAux2;
+uniform float u_TimeAux3;
+uniform float u_TimeAux4;
 
 out vec4 out_Col;
 
@@ -94,8 +98,8 @@ float sdfShaft(vec3 p) {
 
 const float NUM_CYCLES = 5.0;
 
-const float LAUNCH_INTERVAL = 0.07;
-const float LAUNCH_END = NUM_CYCLES - 0.022;
+const float LAUNCH_INTERVAL = 0.15;
+const float LAUNCH_END = NUM_CYCLES - 0.082;
 const float LAUNCH_START = LAUNCH_END - LAUNCH_INTERVAL;
 
 const vec3 LAUNCH_MOVEMENT = vec3(0.0, 0.0, -10.25) * HOLE_PIECE_SIDE;
