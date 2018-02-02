@@ -8,21 +8,29 @@ https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 
 ## Live Demo
 
-- Click below for the live demo!
+- Click below for the live demo! (**Autoplays audio!**)
 
-[![]()](https://maukmu.github.io/homework-2-ray-marching-implicit-surfaces/)
+[![](img/cover.png)](https://maukmu.github.io/homework-2-ray-marching-implicit-surfaces/)
+
+## Inspiration
+
+- You will note the program plays an audio file. This shader is inspired by the rhythm game Rhythm Heaven, released for the DS. In particular, I tried to re-create the mini-game "Built to Scale", which you can see on [this video](https://www.youtube.com/watch?v=Fx2hJHWLoaI).
 
 ## Techniques Used
 
-- `LOVE`
-- `DETERMINATION`
-- Spaghetti 
+- The bulk of this project was developed based on IQ's publications about ray-marching SDFs. In particular, I made use of many SDFs published by him.
+- The green blocks are created with a combination of **domain repetition**, **intersection**, and **subtraction** of a cube primitive. The cube is repeated on a grid, and then intersected with a scaled cube to create a rectangular subset of this grid. Other sections of this subset are subtracted away in order to create the staircase effect.
+- The white squares with holes are made from a scaled cube, from which a cylinder is subtracted.
+- The contraption that shoots the cylinders is made from the **addition** of two "capped cylinders", a sphere, and a scaled cube. Note I avoided the smooth blend on purpose to give this a more mechanical look.
+- The animations are achieved by rotating, translating, and scaling the point used to sample each SDF accordingly. I developed an overly-complicated method of parametrizing these animations that led to the use of several uniform time variables in the shader.
 
 ## External References
 
-- http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#surface-normals-and-lighting
-- http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-- http://demofox.org/biasgain.html
+- [General Resource for SDF](http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#surface-normals-and-lighting)
+- [IQ's article about ray-marching SDFs](http://iquilezles.org/www/articles/distfunctions/distfunctions.htm)
+- [Article about bias/gain functions](http://demofox.org/biasgain.html)
+- [IQ's article for help with SDF ambient occlusion](http://www.iquilezles.org/www/material/nvscene2008/rwwtt.pdf)
+- [matiasm97's playthrough of "Built to Scale", from which I took the audio](https://www.youtube.com/watch?v=Fx2hJHWLoaI)
 
 ## Objective
 - Gain more experience with GLSL Shader writing and raymarching
