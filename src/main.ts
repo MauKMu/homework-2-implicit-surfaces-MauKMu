@@ -135,7 +135,7 @@ function main() {
            time < 91.849 ? (time - 89.029) / 0.361 : 
            time < 93.448 ? (time - 90.849) / 0.361 : 
            time < 99.999 ? (time - 92.448) / 0.927 :
-                           ((time - 99.999) % 4.0) / 0.5;
+                           ((time - 99.999) % 8.0) / 0.5;
   } 
 
   function getAnimTimeRaw(time: number) {
@@ -171,7 +171,7 @@ function main() {
            time < 90.849 ? (time - 89.029) / 0.361 : 
            time < 92.448 ? (time - 90.849) / 0.361 : 
            time < 99.999 ? (time - 92.448) / 0.927 :
-                           ((time - 99.999) % 4.0) / 0.5;
+                           ((time - 99.999) % 8.0) / 0.5;
   } 
 
   function getAnimTime1(time: number) {
@@ -243,7 +243,7 @@ function main() {
            time < 99.999 ? (time - 89.029) / 0.361 : 
            //time < 92.448 ? (time - 90.849) / 0.361 : 
            //time < 99.999 ? (time - 92.448) / 0.927 :
-                           ((time - 99.999) % 4.0) / 0.5;
+                           ((time - 99.999) % 8.0) / 0.5;
   } 
 
   function getAnimTime3(time: number) {

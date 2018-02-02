@@ -531,9 +531,6 @@ float getSSS(vec3 p, vec3 vNormal) {
 
 const float MAX_DIST = 1000.0;
 
-// cake???
-// PCB??
-// rhythm heaven?
 Intersection sphereMarch(in Ray r) {
     float t = 0.0;
     Intersection isx;
@@ -557,7 +554,6 @@ Intersection sphereMarch(in Ray r) {
             float distYH = udfRoundBox(p + vec3(0.0, EPSILON, 0.0), dims, radius, color);
             float distZL = udfRoundBox(p - vec3(0.0, 0.0, EPSILON), dims, radius, color);
             float distZH = udfRoundBox(p + vec3(0.0, 0.0, EPSILON), dims, radius, color);
-            // local normal!! need invTr
             isx.normal = normalize(vec3(distXL - distXH, distYL - distYH, distZL - distZH));
             break;
         }
@@ -570,11 +566,20 @@ Intersection sphereMarch(in Ray r) {
     }
     return isx;
 }
+
+vec3 getBG(in Ray ray) {
+    float t = (max(u_TimeAux4, LAUNCH_START) - LAUNCH_START) / LAUNCH_INTERVAL;
+    //t = (t > 0.7) ? 0.0 : smoothstep(0.3, 0.71, t);
+    t = 1.0 - smoothstep(0.0, 0.6, abs(0.8 - t));
+    vec3 baseColor = ray.dir * 0.5 + vec3(0.5);
+    const vec3 altColor = vec3(0.0, 0.9, 0.0);//vec3(1.0) - baseColor;
+    return mix(baseColor, altColor, t);
+}
+
+
 void main() {
 	// TODO: make a Raymarcher!
-    // aspect ratio?
     vec2 ndc = (gl_FragCoord.xy / u_Dims) * 2.0 - vec2(1.0);
-    // flip Y?
     vec4 worldTarget = u_InvViewProj * vec4(ndc, 1.0, 1.0) * FAR_PLANE;
     Ray ray;
     ray.origin = u_EyePos;
@@ -587,10 +592,9 @@ void main() {
     float ao = getAO(isxPoint, isx.normal);
     float lambert = getLambert(isxPoint, isx.normal);
     float sss = getSSS(isxPoint, isx.normal);
-    //float t = jankySqr(ray);
-    out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
-    out_Col.xyz = vec3(0.05, 0.7, 0.1);
-    out_Col.xyz = isx.color;
+    //out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
+    //out_Col.xyz = vec3(0.05, 0.7, 0.1);
+    out_Col.xyz = (isx.t == -1.0 || isx.t == MAX_DIST) ? getBG(ray) : isx.color;
     out_Col.xyz *= (lambert * 1.0 + sss * 2.0);
     out_Col.xyz *= ao;
     //out_Col.xyz *= (lambert);
