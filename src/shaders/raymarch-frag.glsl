@@ -32,6 +32,7 @@ struct Ray {
 struct Intersection {
     float t;
     vec3 normal;
+    vec3 color;
 };
 
 float sdfCube(vec3 p) {
@@ -506,12 +507,24 @@ float getAnimTime(float time) {
            time < 58.362 ? (time - 56.527) / 0.371 : 
            time < 60.167 ? (time - 58.362) / 0.386 : 
            time < 61.756 ? (time - 60.167) / 0.386 : 
-           time < 34.954 ? (time - 61.756) / 0.256 : 
-           0.0;
+           time < 63.566 ? (time - 61.756) / 0.256 : 
+           time < 67.206 ? (time - 63.566) / 0.371 : 
+           time < 70.840 ? (time - 67.206) / 0.481 : 
+           time < 74.480 ? (time - 70.840) / 0.366 : 
+           time < 76.195 ? (time - 74.480) / 0.371 : 
+           time < 79.945 ? (time - 76.195) / 0.256 : 
+           time < 81.765 ? (time - 79.945) / 0.356 : 
+           time < 83.580 ? (time - 81.765) / 0.356 : 
+           time < 85.856 ? (time - 83.580) / 0.471 : 
+           time < 87.219 ? (time - 85.856) / 0.256 : 
+           time < 89.029 ? (time - 87.219) / 0.361 : 
+           time < 90.849 ? (time - 89.029) / 0.361 : 
+           time < 92.448 ? (time - 90.849) / 0.361 : 
+                           (time - 92.448) / 0.917 ; 
 }
 // b = box dimensions
 // r = radius of round parts
-float udfRoundBox(vec3 p, vec3 b, float r)
+float udfRoundBox(vec3 p, vec3 b, float r, inout vec3 color)
 {
   float baseTime = u_Time * 0.001;
   float animTime = getAnimTime(baseTime);
@@ -535,29 +548,17 @@ float udfRoundBox(vec3 p, vec3 b, float r)
   float right = animHolePieceRight(p - RIGHT_TRANSLATION, animTime);
   // test peg
   float peg = animPeg(p - PEG_TRANSLATION, animTime);
-  float partial = min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
-  return min(secondShaft, min(partial, firstShaft));
-  return sdfHolePiece(p);
-  return sdfCylinder(p, b);
-  return sdfFlatCube(p);
-  //return sdfTriPrism(p, vec2(2.0, 4.0));
-  //return opCheapBend(p);
-  //return sdfCylinder(p, b);
-  /*
-  vec3 c = vec3(6.0, 12.0, 6.0);
-  vec3 q = mod(p, c) - 0.5 * c;
-  return sdfTorus82(q, b.xy);
-  */
-  // note: can render cube from inside if return abs of "udf"
-  return length(max(abs(p)-b,0.0))-r;
-  //return sdfCube(p);
-  // below gives interesting result w/ r = 1, b = vec3(2, 1, 1)
-  return length(min(abs(p)-b,0.0))-r;
-  return length(p) - r;
+  float whiteParts = min(left, min(right, min(peg, min(firstShaft, secondShaft))));
+  //float partial = min(peg, min(pegSupport, min(pegBridge, min(carved, min(bridge, min(left, right))))));
+  float scene = min(whiteParts, min(pegSupport, min(pegBridge, min(carved, bridge))));
+  //float scene = min(secondShaft, min(partial, firstShaft));
+  color = (scene == whiteParts) ? vec3(0.9) : vec3(0.1, 0.7, 0.1);
+  return scene;
 }
 
 float sdfScene(vec3 p) {
-    return udfRoundBox(p, vec3(0.0), 0.0);
+    vec3 dummy;
+    return udfRoundBox(p, vec3(0.0), 0.0, dummy);
 }
 
 const float AO_DELTA = 0.5;//0.66 * HOLE_PIECE_SIDE;
@@ -625,6 +626,7 @@ Intersection sphereMarch(in Ray r) {
     Intersection isx;
     isx.t = -1.0;
     isx.normal = vec3(1.0, -1.0, -1.0);
+    vec3 color;
     for (int i = 0; i < 300; i++) {
         vec3 p = r.origin + t * r.dir;
         vec3 dims = vec3(1.0, 1.0, 1.0 + (cos(u_Time * 0.001) * 0.5 + 0.5));
@@ -632,15 +634,16 @@ Intersection sphereMarch(in Ray r) {
         dims.z = 1.0;
         dims.xy = vec2(0.0);
         float radius = 0.3;
-        float dist = udfRoundBox(p, dims, radius);
+        float dist = udfRoundBox(p, dims, radius, color);
         if (dist < EPSILON * 10.0) {
             isx.t = t;
-            float distXL = udfRoundBox(p - vec3(EPSILON, 0.0, 0.0), dims, radius);
-            float distXH = udfRoundBox(p + vec3(EPSILON, 0.0, 0.0), dims, radius);
-            float distYL = udfRoundBox(p - vec3(0.0, EPSILON, 0.0), dims, radius);
-            float distYH = udfRoundBox(p + vec3(0.0, EPSILON, 0.0), dims, radius);
-            float distZL = udfRoundBox(p - vec3(0.0, 0.0, EPSILON), dims, radius);
-            float distZH = udfRoundBox(p + vec3(0.0, 0.0, EPSILON), dims, radius);
+            isx.color = color;
+            float distXL = udfRoundBox(p - vec3(EPSILON, 0.0, 0.0), dims, radius, color);
+            float distXH = udfRoundBox(p + vec3(EPSILON, 0.0, 0.0), dims, radius, color);
+            float distYL = udfRoundBox(p - vec3(0.0, EPSILON, 0.0), dims, radius, color);
+            float distYH = udfRoundBox(p + vec3(0.0, EPSILON, 0.0), dims, radius, color);
+            float distZL = udfRoundBox(p - vec3(0.0, 0.0, EPSILON), dims, radius, color);
+            float distZH = udfRoundBox(p + vec3(0.0, 0.0, EPSILON), dims, radius, color);
             // local normal!! need invTr
             isx.normal = normalize(vec3(distXL - distXH, distYL - distYH, distZL - distZH));
             break;
@@ -674,6 +677,7 @@ void main() {
     //float t = jankySqr(ray);
     out_Col.xyz = isx.normal * 0.5 + vec3(0.5);
     out_Col.xyz = vec3(0.05, 0.7, 0.1);
+    out_Col.xyz = isx.color;
     out_Col.xyz *= (lambert * 1.0 + sss * 2.0);
     out_Col.xyz *= ao;
     //out_Col.xyz *= (lambert);
