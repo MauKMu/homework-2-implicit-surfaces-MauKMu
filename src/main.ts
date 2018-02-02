@@ -62,6 +62,43 @@ function main() {
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/raymarch-frag.glsl')),
   ]);
 
+
+  function getAnimTime(time: number) {
+    return time < 5.545 ? 0.0 :
+           time < 10.458 ? (time - 5.545) * 2.0 : 
+           time < 15.361 ? (time - 10.458) / 0.6 :
+           time < 20.259 ? (time - 15.361) * 2.0 : 
+           time < 22.546 ? (time - 20.259) / 0.45 : 
+           time < 25.158 ? (time - 22.546) / 0.366 : 
+           time < 30.056 ? (time - 25.158) / 0.506 : 
+           time < 34.954 ? (time - 30.056) / 0.506 : 
+           time < 39.852 ? (time - 34.954) / 0.486 : 
+           time < 42.163 ? (time - 39.852) / 0.471 : 
+           time < 49.182 ? (time - 42.163) / 0.331 : 
+           time < 51.057 ? (time - 49.182) / 0.486 : 
+           time < 52.872 ? (time - 51.057) / 0.431 : 
+           time < 54.481 ? (time - 52.872) / 0.376 : 
+           time < 56.527 ? (time - 54.481) / 0.361 : 
+           time < 58.362 ? (time - 56.527) / 0.371 : 
+           time < 60.167 ? (time - 58.362) / 0.386 : 
+           time < 61.756 ? (time - 60.167) / 0.386 : 
+           time < 63.566 ? (time - 61.756) / 0.256 : 
+           time < 67.206 ? (time - 63.566) / 0.371 : 
+           time < 70.840 ? (time - 67.206) / 0.481 : 
+           time < 74.480 ? (time - 70.840) / 0.366 : 
+           time < 76.195 ? (time - 74.480) / 0.371 : 
+           time < 79.945 ? (time - 76.195) / 0.256 : 
+           time < 81.765 ? (time - 79.945) / 0.356 : 
+           time < 83.580 ? (time - 81.765) / 0.356 : 
+           time < 85.856 ? (time - 83.580) / 0.471 : 
+           time < 87.219 ? (time - 85.856) / 0.256 : 
+           time < 89.029 ? (time - 87.219) / 0.361 : 
+           time < 90.849 ? (time - 89.029) / 0.361 : 
+           time < 92.448 ? (time - 90.849) / 0.361 : 
+           time < 99.999 ? (time - 92.448) / 0.917 :
+                           ((time - 99.999) % 4.0) / 0.5;
+  } 
+
   const sound = new Howler.Howl({
       src: ['built2scale.wav']
   });
@@ -86,7 +123,7 @@ function main() {
     accTime += now - lastTime;
     //accTime = (accTime > 11 * 1000) ? 0.0 : accTime;
     lastTime = now;
-    raymarchShader.setTime(accTime);
+    raymarchShader.setTime(getAnimTime(accTime * 0.001));
 
     // March!
     raymarchShader.draw(screenQuad);

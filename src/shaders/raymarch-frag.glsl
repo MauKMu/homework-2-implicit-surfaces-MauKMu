@@ -35,62 +35,7 @@ struct Intersection {
     vec3 color;
 };
 
-float sdfCube(vec3 p) {
-    vec3 d = abs(p) - vec3(0.5);
-    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
-}
-
-// t.x = outer radius
-// t.y = inner radius
-float sdfTorus(vec3 p, vec2 t)
-{
-  vec2 q = vec2(length(p.xz)-t.x,p.y);
-  return length(q)-t.y;
-}
-
-float length8(vec2 v) {
-    float sum = dot(vec2(1.0), pow(v, vec2(8.0)));
-    return pow(sum, 0.125);
-}
-
-float length8(vec3 v) {
-    float sum = dot(vec3(1.0), pow(v, vec3(8.0)));
-    return pow(sum, 0.125);
-}
-
-float sdfTorus82( vec3 p, vec2 t )
-{
-  vec2 q = vec2(length(p.xz)-t.x,p.y);
-  return length8(q)-t.y;
-}
-
-// c.xy = coordinates of center
-// c.z  = radius of cylinder's cross-section
-// modified from IQ's to make cylinder extend along Z axis instead of Y
-float sdfCylinder(vec3 p, vec3 c)
-{
-  return length(p.xy-c.xy)-c.z;
-}
-
-float sdfTriPrism( vec3 p, vec2 h )
-{
-    vec3 q = abs(p);
-    return max(q.z-h.y,max(q.x*0.866025+p.y*0.5,-p.y)-h.x*0.5);
-}
-
-float opCheapBend( vec3 P )
-{
-    mat3 rot = mat3(0.0);
-    rot[0] = vec3(0, 0, -1);
-    rot[1] = vec3(0, 1, 0);
-    rot[2] = vec3(1, 0, 0);
-    vec3 p = rot * P;
-    float c = cos(20.0*p.y);
-    float s = sin(20.0*p.y);
-    mat2  m = mat2(c,-s,s,c);
-    vec3  q = vec3(m*p.xz,p.y);
-    return sdfTriPrism(q, vec2(2.0, 4.0));
-}
+// HOLE PIECE ======================================
 
 const float HOLE_PIECE_SIDE = 3.0;
 const float HOLE_PIECE_THICKNESS = 0.5;
@@ -355,16 +300,6 @@ const vec3 PANEL_START = vec3(0.0, 0.0, -1.0 * SHAFT_LENGTH);
 float animSecondShaft(vec3 p, float time) {
     float tRot = (clamp(time, LAUNCH_START, LAUNCH_END) - LAUNCH_START) / LAUNCH_INTERVAL;
     tRot = (time > LAUNCH_END) ? (1.0 - 2.0 * clamp(time - LAUNCH_END, 0.0, 0.5)) : tRot;
-    /*
-    float tRot = (clamp(time, LAUNCH_START, LAUNCH_END * 100.0) - LAUNCH_START) / LAUNCH_INTERVAL;
-    float tSin = -sin(tRot);
-    float signFactor = (tSin < 0.0) ? 0.2 : 0.8;
-    tRot *= (tRot < 0.0) ? 0.2 : 0.8; 
-    tRot = (time < LAUNCH_START - 1.0) ? 0.2 :
-           (time < LAUNCH_START) ? 0.2 :
-           (time > LAUNCH_END) ? (0.2 + signFactor * tSin * exp((-time + LAUNCH_END) * 5.0)) :
-           (0.2 + signFactor * tSin);
-           */
     //float tRot = clamp(time, SHAFT_ROT_START, SHAFT_ROT_END) - SHAFT_ROT_START;
     float rotAngle = 0.5 - cos(tRot * PI) * 0.5;
     rotAngle += 5.0;
@@ -488,6 +423,7 @@ const vec3 PEG_BRIDGE_TRANSLATION = vec3(-1.0, -2.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 PEG_TRANSLATION = vec3(0.0, 0.0, 10.25) * HOLE_PIECE_SIDE;
 const vec3 FIRST_SHAFT_TRANSLATION = vec3(0.0, 2.0, 18.0) * HOLE_PIECE_SIDE;
 
+/*
 float getAnimTime(float time) {
     return time < 5.545 ? 0.0 :
            time < 10.458 ? (time - 5.545) * 2.0 : 
@@ -520,14 +456,18 @@ float getAnimTime(float time) {
            time < 89.029 ? (time - 87.219) / 0.361 : 
            time < 90.849 ? (time - 89.029) / 0.361 : 
            time < 92.448 ? (time - 90.849) / 0.361 : 
-                           (time - 92.448) / 0.917 ; 
+                           (time - 92.448) / 0.917 ;
+           //time < 99.999 ? (time - 92.448) / 0.917 :
+                           //mod(time - 99.999, 4.0) / 0.5;
 }
+*/
+
 // b = box dimensions
 // r = radius of round parts
 float udfRoundBox(vec3 p, vec3 b, float r, inout vec3 color)
 {
   float baseTime = u_Time * 0.001;
-  float animTime = getAnimTime(baseTime);
+  float animTime = u_Time;//getAnimTime(baseTime);
   float firstShaft = animFirstShaft(p - FIRST_SHAFT_TRANSLATION, animTime);
   float secondShaft = animSecondShaft(p - FIRST_SHAFT_TRANSLATION, animTime);
   // test carved background
