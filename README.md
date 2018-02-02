@@ -23,10 +23,14 @@ https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 - The green blocks are created with a combination of **domain repetition**, **intersection**, and **subtraction** of a cube primitive. The cube is repeated on a grid, and then intersected with a scaled cube to create a rectangular subset of this grid. Other sections of this subset are subtracted away in order to create the staircase effect.
 - The white squares with holes are made from a scaled cube, from which a cylinder is subtracted.
 - The contraption that shoots the cylinders is made from the **addition** of two "capped cylinders", a sphere, and a scaled cube. Note I avoided the smooth blend on purpose to give this a more mechanical look.
-- The animations are achieved by rotating, translating, and scaling the point used to sample each SDF accordingly. I developed an overly-complicated method of parametrizing these animations that led to the use of several uniform time variables in the shader.
+- The **animations** are achieved by rotating, translating, and scaling the point used to sample each SDF accordingly. I developed an overly-complicated method of parametrizing these animations that led to the use of several uniform time variables in the shader.
     - Small note: the pieces with holes on them fly off into the distance. This is due to a dilemma I had when deciding what to do with the pieces, since the game does not show what happens to them at the end of the "production line". I chose the simplest solution of just making them fly off into the distance, since this is technically something that could happen in-game (it's just that the player would never see it), and I thought it was entertaining.
 - **Ambient occlusion** is computed using IQ's "5-tap" method explained in the external resource linked below.
 - A **sub-surface scattering approximation** is computed using a combination of IQ's AO method and the ideas presented in [this GDC presentation](https://colinbarrebrisebois.com/2011/03/07/gdc-2011-approximating-translucency-for-a-fast-cheap-and-convincing-subsurface-scattering-look/).
+  - A moving light was added in hopes of making this effect more clear.
+- A couple of **control** options are available:
+  - `renderMode`: You can choose between applying only ambient occlusion (AO), only sub-surface scattering (SSS), only Lambert, or applying all three shading techniques ("Full", enabled by default).
+  - `baseShape`: This lets you swap out the green cubes for green sphere. Wow!
 
 ## External References
 
@@ -35,6 +39,8 @@ https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 - [Article about bias/gain functions](http://demofox.org/biasgain.html)
 - [IQ's article for help with SDF ambient occlusion](http://www.iquilezles.org/www/material/nvscene2008/rwwtt.pdf)
 - [matiasm97's playthrough of "Built to Scale", from which I took the audio](https://www.youtube.com/watch?v=Fx2hJHWLoaI)
+- [Howler library for playing audio](https://howlerjs.com/)
+  - [Howler types for compatibility with TypeScript](https://www.npmjs.com/package/@types/howler)
 
 ## Objective
 - Gain more experience with GLSL Shader writing and raymarching
