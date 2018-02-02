@@ -10,11 +10,12 @@ https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 
 - Click below for the live demo! (**Autoplays audio!**)
 
-[![](img/cover.png)](https://maukmu.github.io/homework-2-ray-marching-implicit-surfaces/)
+[![](img/cover.png)](https://maukmu.github.io/homework-2-implicit-surfaces-MauKMu)
 
 ## Inspiration
 
 - You will note the program plays an audio file. This shader is inspired by the rhythm game Rhythm Heaven, released for the DS. In particular, I tried to re-create the mini-game "Built to Scale", which you can see on [this video](https://www.youtube.com/watch?v=Fx2hJHWLoaI).
+- The animations are supposed to play in sync with the audio, similar to what happens in the video. It works okay (not perfectly) when running on my own machine, but there are issues with the version up on Github pages, for some reason.
 
 ## Techniques Used
 
@@ -23,6 +24,9 @@ https://github.com/CIS-566-2018/homework-2-ray-marching-implicit-surfaces
 - The white squares with holes are made from a scaled cube, from which a cylinder is subtracted.
 - The contraption that shoots the cylinders is made from the **addition** of two "capped cylinders", a sphere, and a scaled cube. Note I avoided the smooth blend on purpose to give this a more mechanical look.
 - The animations are achieved by rotating, translating, and scaling the point used to sample each SDF accordingly. I developed an overly-complicated method of parametrizing these animations that led to the use of several uniform time variables in the shader.
+    - Small note: the pieces with holes on them fly off into the distance. This is due to a dilemma I had when deciding what to do with the pieces, since the game does not show what happens to them at the end of the "production line". I chose the simplest solution of just making them fly off into the distance, since this is technically something that could happen in-game (it's just that the player would never see it), and I thought it was entertaining.
+- **Ambient occlusion** is computed using IQ's "5-tap" method explained in the external resource linked below.
+- A **sub-surface scattering approximation** is computed using a combination of IQ's AO method and the ideas presented in [this GDC presentation](https://colinbarrebrisebois.com/2011/03/07/gdc-2011-approximating-translucency-for-a-fast-cheap-and-convincing-subsurface-scattering-look/).
 
 ## External References
 
